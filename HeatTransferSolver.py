@@ -134,7 +134,7 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_args, max_step=1e6 * years
     #     print('ivp_args', ivp_args)
     #     # print('signature of heating_rate_function', list(sig.parameters.keys())[2:])  # skipping t, u
 
-    tspan = tf-t0
+    tspan = tf - t0
     ivp_args = ivp_args + (tspan, show_progress)
     start = time.time()
     soln = solve_ivp(heating_rate_function,
@@ -172,7 +172,8 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     """ function to calculate dT/dt for each z (evaluated at array of temperatures u)
     this can be sped up by ~2 if mixing length is time-independent"""
     if show_progress:
-        print("\rModel time: " + str(format(t/years2sec, ".0f")) + " yr, Completion percentage " + str(format(((t / tspan) * 100), ".4f")) + "%",
+        print("\rModel time: " + str(format(t / years2sec, ".0f")) + " yr, Completion percentage " + str(
+            format(((t / tspan) * 100), ".4f")) + "%",
               end='', flush=True)
 
     # update viscosity
@@ -355,7 +356,7 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
     t0, tf = 0, 5e9 * years2sec
 
     try:
-        max_step = (tf-t0)/Nt_min
+        max_step = (tf - t0) / Nt_min
         if verbose:
             print('max step:', max_step / years2sec, 'years')
     except ZeroDivisionError:
@@ -424,7 +425,7 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
         plt.show()
 
 
-def test_viscositycontrast(N=1000, Nt_min=1000, verbose=True, writefile=None, plot=True):
+def test_arrhenius_radheating(N=1000, Nt_min=1000, verbose=True, writefile=None, plot=True, figpath=None):
     """ test generic case """
     from MLTMantle import get_mixing_length_and_gradient_smooth, exponential_viscosity_law, Arrhenius_viscosity_law
     from MLTMantleCalibrated import get_mixing_length_calibration
@@ -438,7 +439,7 @@ def test_viscositycontrast(N=1000, Nt_min=1000, verbose=True, writefile=None, pl
     t0, tf = 0, 5e9 * years2sec  # seconds
 
     try:
-        max_step = (tf-t0)/Nt_min
+        max_step = (tf - t0) / Nt_min
         if verbose:
             print('max step:', max_step / years2sec, 'years')
     except ZeroDivisionError:
@@ -448,7 +449,7 @@ def test_viscositycontrast(N=1000, Nt_min=1000, verbose=True, writefile=None, pl
 
     # dimensionless convective parameters
     RaH = 1e7
-    dEta = 1e4
+    dEta = 1e5
     # mixing length calibration (stagnant lid mixed heated)
     # alpha_mlt = 0.2895
     # beta_mlt = 0.6794
@@ -513,14 +514,15 @@ def test_viscositycontrast(N=1000, Nt_min=1000, verbose=True, writefile=None, pl
 
     if plot:
         # plot
+        fig, ax = plt.subplots(1, 3)
+
         n = -1
-        plt.figure()
-        plt.plot(zp, soln.y[:, n], label='Arrhenius')
+        ax[0].plot(zp, soln.y[:, n], label='Arrhenius')
         # plt.plot(zp, soln2.y[:, n], label='exponential')
-        plt.xlabel('z/L')
-        plt.ylabel('T (K)')
-        plt.title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
-        plt.legend()
+        ax[0].set_xlabel('z/L')
+        ax[0].set_ylabel('T (K)')
+        ax[0].set_title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
+        ax[0].legend()
 
         # i = N - 1
         # plt.figure()
@@ -529,17 +531,26 @@ def test_viscositycontrast(N=1000, Nt_min=1000, verbose=True, writefile=None, pl
         # plt.ylabel('Surface temperature (K)')
 
         n = 0  # initial
-        fig, ax = plt.subplots(1, 2)
-        ax[0].plot(zp, np.log10(Arrhenius_viscosity_law(soln.y[:, n], zp, **eta_kwargs_Arr)), label='Arrhenius')
-        # ax[0].plot(zp, np.log10(
+        ax[1].plot(zp, np.log10(Arrhenius_viscosity_law(soln.y[:, n], zp, **eta_kwargs_Arr)), label='Arrhenius')
+        # ax[1].plot(zp, np.log10(
         #     exponential_viscosity_law(soln2.y[:, n], zp, **eta_kwargs2)), label='exponential')
-        # ax[1].plot(zp, kv)
-        ax[0].set_ylabel(r'log$\eta$')
-        # ax[1].set_ylabel('kv')
-        fig.suptitle('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
+        ax[1].set_xlabel('z/L')
+        ax[1].set_ylabel(r'log$\eta$')
+        ax[1].set_title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
 
-        plt.show()
+        # internal heating
+        ax[2].plot(soln.t / (years2sec * 1e9), [radiogenic_heating(tt, x=None, **g_kwargs_decay) for tt in soln.t],
+                   label='Radiogenic heating')
+        ax[2].set_xlabel('t (Gyr)')
+        ax[2].set_ylabel('H (W/m3)')
+        ax[2].legend()
+
+        if figpath is not None:
+            fig.savefig(figpath, bbox_inches='tight')
+        else:
+            plt.show()
 
 
 # test_isoviscous(writefile='isoviscous.h5py')
-test_viscositycontrast(N=1000, Nt_min=1000, writefile='radheating.h5py')
+test_arrhenius_radheating(N=1000, Nt_min=1000, writefile='output/tests/radheating.h5py', plot=True,
+                          figpath='figs_scratch/radheating.h5py')
