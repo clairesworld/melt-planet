@@ -1,6 +1,6 @@
 """
 Module to calculate mantle thermal evolution via Mixing Length Theory
-Based on Vilella & Kamata (2021) and  Tachinami, Senshu, and Ida (2011)
+Based on Vilella & Kamata (2021)
 """
 
 import numpy as np
