@@ -49,48 +49,63 @@ def convective_coefficient(alpha, rho, cp, gravity, l, eta, dudx_adiabat, dudx):
     return np.maximum(alpha * rho ** 2 * cp * gravity * l ** 4 / (18 * eta) * (dudx_adiabat - dudx), 0)
 
 
-def radiogenic_heating(t, x, H0=3.4e-11, rho=None, t0_buffer_Gyr=0, **kwargs):
-    """Calculate radiogenic heating in W kg^-1 from Korenaga (2006)"""
-    sec2Gyr = 1 / 3.154e7 * 1e-9
-    t_Gyr = t * sec2Gyr + t0_buffer_Gyr
+# def radiogenic_heating(t, x, H0=3.4e-11, rho=None, t0_buffer_Gyr=0, **kwargs):
+#     """Calculate radiogenic heating in W kg^-1 from Korenaga (2006)"""
+#     sec2Gyr = 1 / 3.154e7 * 1e-9
+#     t_Gyr = t * sec2Gyr + t0_buffer_Gyr
+#
+#     # order of isotopes: 238U, 235U, 232Th, 40K
+#     c_n = np.array([0.9927, 0.0072, 4.0, 1.6256])  # relative concentrations of radiogenic isotopes
+#     p_n = np.array([9.37e-5, 5.69e-4, 2.69e-5, 2.79e-5])  # heat generation rates (W/kg)
+#     lambda_n = np.array([0.155, 0.985, 0.0495, 0.555])  # half lives (1/Gyr)
+#     h_n = (c_n * p_n) / np.sum(c_n * p_n)  # heat produced per kg of isotope normalized to total U
+#     # print('H0', H0, 'h_n', h_n, 'lambda_n', lambda_n, 't_Gyr', t_Gyr, 'exp', sum(h_n * np.exp(lambda_n * t_Gyr)) )
+#     h = H0 * sum(h_n * np.exp(-lambda_n * t_Gyr))
+#     # print('h', h, 'h*rho', h*rho, 'rho', rho)
+#     return h * rho
 
-    # order of isotopes: 238U, 235U, 232Th, 40K
-    c_n = np.array([0.9927, 0.0072, 4.0, 1.6256])  # relative concentrations of radiogenic isotopes
-    p_n = np.array([9.37e-5, 5.69e-4, 2.69e-5, 2.79e-5])  # heat generation rates (W/kg)
-    lambda_n = np.array([0.155, 0.985, 0.0495, 0.555])  # half lives (1/Gyr)
-    h_n = (c_n * p_n) / np.sum(c_n * p_n)  # heat produced per kg of isotope normalized to total U
-    # print('H0', H0, 'h_n', h_n, 'lambda_n', lambda_n, 't_Gyr', t_Gyr, 'exp', sum(h_n * np.exp(lambda_n * t_Gyr)) )
-    h = H0 * sum(h_n * np.exp(-lambda_n * t_Gyr))
-    # print('h', h, 'h*rho', h*rho, 'rho', rho)
-    return h * rho
+
+# def internal_heating_decaying(t, x, age_Gyr=None, x_Eu=1, rho=None, t0_buffer_Gyr=0):
+#     """ radiogenic heating in W/kg after Table 1 and eqn 1 in O'Neill+ 2020 (SSR)
+#     x_Eu: concentration of r-process elements wrt solar (i.e. Eu, U, Th)"""
+#     # order of isotopes (IMPORTANT) is [40K, 238U, 235U, 232Th]
+#     tau_i = np.array([1250, 4468, 703.8, 14050])  # half life in Myr
+#     h_i = np.array([28.761e-6, 94.946e-6, 568.402e-6, 26.368e-6])  # heat production in W/kg
+#     c_i = np.array([30.4e-9, 22.7e-9, 0.16e-9, 85e-9])  # BSE concentration in kg/kg
+#
+#     sec2Gyr = 1 / 3.154e7 * 1e-9
+#
+#     # convert times to Myr to be consistent with units of tau
+#     # add buffer to start simulation from x Gyr (solver has problems if t0>0 ?)
+#     t_Myr = (t * sec2Gyr + t0_buffer_Gyr) * 1e3
+#     h_K = np.array(c_i[0] * h_i[0] * np.exp((age_Gyr * 1e3 - t_Myr) * np.log(2) / tau_i[0]))
+#     try:
+#         h_UTh = np.array(sum(c_i[1:] * h_i[1:] * np.exp((age_Gyr * 1e3 - t_Myr) * np.log(2) / tau_i[1:])))
+#     except ValueError:
+#         t_Myr = np.vstack((t_Myr, t_Myr, t_Myr))
+#         c_i = c_i.reshape((4, 1))
+#         h_i = h_i.reshape((4, 1))
+#         tau_i = tau_i.reshape((4, 1))
+#         h_UTh = np.array(np.sum(c_i[1:] * h_i[1:] * np.exp((age_Gyr * 1e3 - t_Myr) * np.log(2) / tau_i[1:]), axis=0))
+#
+#     h_perkg = (h_K + x_Eu * h_UTh)
+#     # print(t * sec2Gyr * 1e3, 'Myr', 'h', h_perkg, 'W/kg')
+#     return h_perkg * rho
 
 
-def internal_heating_decaying(t, x, age_Gyr=None, x_Eu=1, rho=None, t0_buffer_Gyr=0):
-    """ radiogenic heating in W/kg after Table 1 and eqn 1 in O'Neill+ 2020 (SSR)
-    x_Eu: concentration of r-process elements wrt solar (i.e. Eu, U, Th)"""
-    # order of isotopes (IMPORTANT) is [40K, 238U, 235U, 232Th]
-    tau_i = np.array([1250, 4468, 703.8, 14050])  # half life in Myr
-    h_i = np.array([28.761e-6, 94.946e-6, 568.402e-6, 26.368e-6])  # heat production in W/kg
-    c_i = np.array([30.4e-9, 22.7e-9, 0.16e-9, 85e-9])  # BSE concentration in kg/kg
+def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Myr=0, **kwargs):
+    # O'Neill+ SSR 2020
+    # 40K, 238U, 235U, 232Th
+    t_Myr = t / years2sec * 1e-6 + t_buffer_Myr
 
-    sec2Gyr = 1 / 3.154e7 * 1e-9
+    c0 = np.array([30.4e-9, 22.7e-9, 0.16e-9, 85e-9])  # present day BSE concentration
+    c0[1:] = c0[1:] * rad_factor  # scale refractories
+    hn = np.array([28.761e-6, 94.946e-6, 568.402e-6, 26.368e-6])  # heating rate per kg isotope
+    tau = np.array([1250, 4468, 703.8, 14040])  # half life in Myr
+    H0 = c0 * hn * np.exp(4500 * np.log(2) / tau)  # initial heating based on (scaled) BSE concentrations
 
-    # convert times to Myr to be consistent with units of tau
-    # add buffer to start simulation from x Gyr (solver has problems if t0>0 ?)
-    t_Myr = (t * sec2Gyr + t0_buffer_Gyr) * 1e3
-    h_K = np.array(c_i[0] * h_i[0] * np.exp((age_Gyr * 1e3 - t_Myr) * np.log(2) / tau_i[0]))
-    try:
-        h_UTh = np.array(sum(c_i[1:] * h_i[1:] * np.exp((age_Gyr * 1e3 - t_Myr) * np.log(2) / tau_i[1:])))
-    except ValueError:
-        t_Myr = np.vstack((t_Myr, t_Myr, t_Myr))
-        c_i = c_i.reshape((4, 1))
-        h_i = h_i.reshape((4, 1))
-        tau_i = tau_i.reshape((4, 1))
-        h_UTh = np.array(np.sum(c_i[1:] * h_i[1:] * np.exp((age_Gyr * 1e3 - t_Myr) * np.log(2) / tau_i[1:]), axis=0))
-
-    h_perkg = (h_K + x_Eu * h_UTh)
-    # print(t * sec2Gyr * 1e3, 'Myr', 'h', h_perkg, 'W/kg')
-    return h_perkg * rho
+    H = np.sum(H0 * np.exp((-t_Myr) * np.log(2) / tau))
+    return H * rho
 
 
 def internal_heating_constant(t, x, H0=1e-12, **kwargs):
@@ -210,11 +225,11 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     # redo boundary conditions (np.gradient might do this differently)
     lhs[-1] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
 
-    # # # bottom bdy condition using constant flux - can assume diffusion only
-    # lhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
+    # bottom bdy condition using constant flux - can assume diffusion only
+    lhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
 
-    # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
-    lhs[0] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
+    # # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
+    # lhs[0] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
 
     dudt = lhs / (rho * cp)
 
@@ -322,11 +337,11 @@ def calc_total_heating_rate_analytic(t, u, dx, xprime, l_function, dudx_ambient_
                              dudx * d2udx2 - d2udx2 * dudx_adiabat - dudx * d2udx2_adiabat + dudx_adiabat * d2udx2_adiabat) \
                      + source_term
 
-    #     # bottom bdy condition using constant flux - can assume diffusion only
-    #     rhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
+        # bottom bdy condition using constant flux - can assume diffusion only
+        rhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
 
-    # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
-    rhs[0] = 0
+    # # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
+    # rhs[0] = 0
 
     return rhs / (rho * cp)
 
@@ -425,7 +440,8 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
         plt.show()
 
 
-def test_arrhenius_radheating(N=1000, Nt_min=1000, verbose=True, writefile=None, plot=True, figpath=None):
+def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=True, writefile=None, plot=True,
+                              figpath=None):
     """ test generic case """
     from MLTMantle import get_mixing_length_and_gradient_smooth, exponential_viscosity_law, Arrhenius_viscosity_law
     from MLTMantleCalibrated import get_mixing_length_calibration
@@ -436,7 +452,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, verbose=True, writefile=None,
     D = 1  # dimensionless length scale
     zp = np.linspace(0, 1, N)  # dimensionless height
     dx = (zp[1] - zp[0]) * L
-    t0, tf = 0, 5e9 * years2sec  # seconds
+    t0, tf = t_buffer_Myr * 1e6 * years2sec, age_Gyr * 1e9 * years2sec  # seconds
 
     try:
         max_step = (tf - t0) / Nt_min
@@ -475,7 +491,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, verbose=True, writefile=None,
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
-    g_kwargs_decay = {'H0': H0, 'rho': rho, 't0_buffer_Gyr': 0}
+    g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
     eta_kwargs_Arr = {'eta_ref': 1e21, 'T_ref': 1600, 'Ea': 300e3}
 
     # # plot internal heating
@@ -495,7 +511,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, verbose=True, writefile=None,
     print('eta_b', eta_b)
 
     ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, Arrhenius_viscosity_law,
-                radiogenic_heating, kc, alpha, rho, cp, gravity, L,
+                rad_heating_forward, kc, alpha, rho, cp, gravity, L,
                 l_kwargs, eta_kwargs_Arr, g_kwargs_decay, l)  # needs to match signature to heating_rate_function
     soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args,
                      verbose=True, show_progress=True, max_step=max_step, writefile=writefile)
@@ -539,7 +555,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, verbose=True, writefile=None,
         ax[1].set_title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
 
         # internal heating
-        ax[2].plot(soln.t / (years2sec * 1e9), [radiogenic_heating(tt, x=None, **g_kwargs_decay) for tt in soln.t],
+        ax[2].plot(soln.t / (years2sec * 1e9), [rad_heating_forward(tt, x=None, **g_kwargs_decay) for tt in soln.t],
                    label='Radiogenic heating')
         ax[2].set_xlabel('t (Gyr)')
         ax[2].set_ylabel('H (W/m3)')
@@ -552,5 +568,5 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, verbose=True, writefile=None,
 
 
 # test_isoviscous(writefile='isoviscous.h5py')
-test_arrhenius_radheating(N=1000, Nt_min=1000, writefile='output/tests/radheating.h5py', plot=True,
-                          figpath='figs_scratch/radheating.h5py')
+# test_arrhenius_radheating(N=1000, Nt_min=1000, writefile='output/tests/radheating.h5py', plot=True,
+#                           figpath='figs_scratch/radheating.pdf')
