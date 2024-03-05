@@ -412,7 +412,8 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
     U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
 
     ivp_args2 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, viscosity_constant,
-                 internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures)
+                 internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l,
+                 pressures)
     soln2 = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args2, verbose=verbose, show_progress=True,
                       writefile=writefile, max_step=max_step)
 
@@ -631,8 +632,8 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
     kappa = kc / (rho * cp)
 
     # constant pressure structure - evaluate at some Tp but should be roughly independent of Tp
-    pressures = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N, alpha=[alpha] * N,
-                           cp=[cp] * N, psurf=1, Tp=1700)  # Pa
+    pressures, Tp = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N,
+                               alpha=[alpha] * N, cp=[cp] * N, psurf=1, Tp=1700)  # Pa
 
     # boundary conditions
     Tsurf = 300
