@@ -1,5 +1,9 @@
-from HeatTransferSolver import test_arrhenius_radheating
+from HeatTransferSolver import test_arrhenius_radheating, test_pdependence
 
-test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=3000, age_Gyr=4.5,
-                          writefile='output/tests/radheating_fixedflux.h5py', plot=True,
-                          figpath='figs_scratch/radheating_fixedflux.pdf')
+# test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=3000, age_Gyr=4.5,
+#                           writefile='output/tests/radheating_fixedflux.h5py', plot=True,
+#                           figpath='figs_scratch/radheating_fixedflux.pdf')
+
+test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=5,
+                 writefile='output/tests/pdependent.h5py', plot=True,
+                 figpath='figs_scratch/pdependent.pdf')

@@ -118,6 +118,8 @@ def internal_heating_constant(t, x, H0=1e-12, **kwargs):
 def solve_pde(t0, tf, U_0, heating_rate_function, ivp_args, max_step=1e6 * years2sec,
               verbose=False, show_progress=False, writefile=None):
     """
+    :param writefile:
+    :type writefile:
     :param show_progress:
     :type show_progress:
     :param max_step:
@@ -149,11 +151,11 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_args, max_step=1e6 * years
     #     print('ivp_args', ivp_args)
     #     # print('signature of heating_rate_function', list(sig.parameters.keys())[2:])  # skipping t, u
 
-    tspan = tf - t0
+    tspan = (t0, tf)
     ivp_args = ivp_args + (tspan, show_progress)
     start = time.time()
     soln = solve_ivp(heating_rate_function,
-                     t_span=(t0, tf), y0=U_0,
+                     t_span=tspan, y0=U_0,
                      method='BDF',  # conserves energy
                      # method='LSODA',
                      t_eval=None,
@@ -182,17 +184,17 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_args, max_step=1e6 * years
 
 
 def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function, g_function, kc,
-                                    alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l,
+                                    alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures,
                                     tspan, show_progress):
     """ function to calculate dT/dt for each z (evaluated at array of temperatures u)
     this can be sped up by ~2 if mixing length is time-independent"""
     if show_progress:
-        print("\rModel time: " + str(format(t / years2sec, ".0f")) + " yr, Completion percentage " + str(
-            format(((t / tspan) * 100), ".4f")) + "%",
+        print("\rModel time: " + str(format(t / years2sec, ".0f")) + " yr, " + str(
+            format((((t - tspan[0]) / (tspan[1] - tspan[0])) * 100), ".4f")) + "% complete",
               end='', flush=True)
 
     # update viscosity
-    eta = eta_function(u, xprime, **eta_kwargs)
+    eta = eta_function(u, pressures, **eta_kwargs)
     # print('viscosity range', eta[0], eta[-1], 'Pa s')
     # print('eta', eta)
     # print('T range', u[0], u[-1], 'K')
@@ -226,7 +228,7 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     lhs[-1] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
 
     # bottom bdy condition using constant flux - can assume diffusion only
-    lhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
+    lhs[0] = (kc / dx ** 2) * (2 * u[1] + 2 * dx * du0dx(t) - 2 * u[0]) + source_term
 
     # # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
     # lhs[0] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
@@ -236,114 +238,115 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     return dudt
 
 
-def calc_total_heating_rate_analytic_isoviscous(t, u, dx, dudx_ambient_function, g_function, l, dldx, kc,
-                                                alpha, rho, cp, gravity, eta, g_kwargs):
-    """ # function to calculate dT/dt for each z (evaluated at array of temperatures u).
-     like the above but as analytic as possible
-     for isoviscous case this is  ~0.1 sec faster
-     """
-    N = len(u)
-    rhs = np.zeros(N)
-    rhs[-1] = 0  # surface boundary condution, dT/dt = 0 because constant T
-
-    source_term = g_function(t, None, **g_kwargs)  # assuming no depth-dependence
-
-    # isoviscous case can be done analytically
-    A = alpha * rho ** 2 * cp * gravity * l ** 4 / (18 * eta)
-    dAdx = 4 * alpha * rho ** 2 * cp * gravity * l ** 3 / (18 * eta) * dldx
-
-    # building profile from top
-    for i in range(N - 2, 0, -1):
-
-        # discretize derivatives - central differences
-        d2udx2 = (u[i + 1] - 2 * u[i] + u[i - 1]) / (dx ** 2)  # second order finite difference
-        dudx = (u[i + 1] - u[i - 1]) / (2 * dx)  # central difference
-        dudx_adiabat = dudx_ambient_function(u[i], None, alpha, cp, gravity)
-        d2udx2_adiabat = -alpha / cp * gravity * dudx  # temp - assuming virtually constant alpha, cp, g
-
-        # check for convection
-        if abs(dudx_adiabat) > abs(dudx):  # -ve kv, no convection
-            rhs[i] = kc * d2udx2 + source_term
-        #             print('kv = 0 at z =', i)
-        else:
-            rhs[i] = kc * d2udx2 - dAdx[i] * (dudx ** 2 - 2 * dudx * dudx_adiabat + dudx_adiabat ** 2) \
-                     - 2 * A[i] * (
-                             dudx * d2udx2 - d2udx2 * dudx_adiabat - dudx * d2udx2_adiabat + dudx_adiabat * d2udx2_adiabat) \
-                     + source_term
-
-    #     # bottom bdy condition using constant flux - can assume diffusion only
-    #     rhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
-
-    # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
-    rhs[0] = 0
-
-    return rhs / (rho * cp)
-
-
-# function to calculate dT/dt for each z (evaluated at array of temperatures u)
-# like the above but as analytic as possible
-def calc_total_heating_rate_analytic(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function, g_function, kc,
-                                     alpha, rho, cp,
-                                     gravity, L, l_kwargs, eta_kwargs, g_kwargs):
-    N = len(u)
-    rhs = np.zeros(N)
-    rhs[-1] = 0  # surface boundary condution, dT/dt = 0 because constant T
-
-    source_term = g_function(t, xprime, **g_kwargs)
-
-    # update eta(T)
-    eta = eta_function(u, xprime, **eta_kwargs)
-
-    # isoviscous case can be done analytically
-    lp, dldx = l_function(xprime, **l_kwargs)
-    l = lp * L  # dimensionalise
-    f = alpha * rho ** 2 * cp * gravity / (18 * eta)
-    df = np.gradient(f, dx)  # a bit too complicated to do analytically
-    g = l ** 4
-    dg = 4 * l ** 3 * dldx
-
-    A = f * g
-
-    try:
-        dAdx = (f * dg) + (df * g)
-    except ValueError:
-        assert len(df) == 0  # f is a scalar, df is here an empty list (actually =0)
-        dAdx = f * dg
-
-    # fig, ax = plt.subplots(1, 2)
-    # ax[0].plot(zp, A)
-    # ax[1].plot(zp, dAdx)
-    # ax[0].set_ylabel('A')
-    # ax[1].set_ylabel('dAdx')
-    # ax[0].legend(['t={:.3f} Myr'.format(t / years2sec * 1e-6)])
-    # plt.show()
-
-    # building profile from top
-    for i in range(N - 2, 0, -1):
-
-        # discretize derivatives - central differences
-        d2udx2 = (u[i + 1] - 2 * u[i] + u[i - 1]) / (dx ** 2)  # second order finite difference
-        dudx = (u[i + 1] - u[i - 1]) / (2 * dx)  # central difference
-        dudx_adiabat = dudx_ambient_function(u[i], xprime, alpha, cp, gravity)
-        d2udx2_adiabat = -alpha / cp * gravity * dudx  # temp - assuming virtually constant alpha, cp, g
-
-        # check for convection
-        if abs(dudx_adiabat) > abs(dudx):  # -ve kv, no convection
-            rhs[i] = kc * d2udx2 + source_term
-        #             print('kv = 0 at z =', i)
-        else:
-            rhs[i] = kc * d2udx2 - dAdx[i] * (dudx ** 2 - 2 * dudx * dudx_adiabat + dudx_adiabat ** 2) \
-                     - 2 * A[i] * (
-                             dudx * d2udx2 - d2udx2 * dudx_adiabat - dudx * d2udx2_adiabat + dudx_adiabat * d2udx2_adiabat) \
-                     + source_term
-
-        # bottom bdy condition using constant flux - can assume diffusion only
-        rhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
-
-    # # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
-    # rhs[0] = 0
-
-    return rhs / (rho * cp)
+#
+# def calc_total_heating_rate_analytic_isoviscous(t, u, dx, dudx_ambient_function, g_function, l, dldx, kc,
+#                                                 alpha, rho, cp, gravity, eta, g_kwargs):
+#     """ # function to calculate dT/dt for each z (evaluated at array of temperatures u).
+#      like the above but as analytic as possible
+#      for isoviscous case this is  ~0.1 sec faster
+#      """
+#     N = len(u)
+#     rhs = np.zeros(N)
+#     rhs[-1] = 0  # surface boundary condution, dT/dt = 0 because constant T
+#
+#     source_term = g_function(t, None, **g_kwargs)  # assuming no depth-dependence
+#
+#     # isoviscous case can be done analytically
+#     A = alpha * rho ** 2 * cp * gravity * l ** 4 / (18 * eta)
+#     dAdx = 4 * alpha * rho ** 2 * cp * gravity * l ** 3 / (18 * eta) * dldx
+#
+#     # building profile from top
+#     for i in range(N - 2, 0, -1):
+#
+#         # discretize derivatives - central differences
+#         d2udx2 = (u[i + 1] - 2 * u[i] + u[i - 1]) / (dx ** 2)  # second order finite difference
+#         dudx = (u[i + 1] - u[i - 1]) / (2 * dx)  # central difference
+#         dudx_adiabat = dudx_ambient_function(u[i], None, alpha, cp, gravity)
+#         d2udx2_adiabat = -alpha / cp * gravity * dudx  # temp - assuming virtually constant alpha, cp, g
+#
+#         # check for convection
+#         if abs(dudx_adiabat) > abs(dudx):  # -ve kv, no convection
+#             rhs[i] = kc * d2udx2 + source_term
+#         #             print('kv = 0 at z =', i)
+#         else:
+#             rhs[i] = kc * d2udx2 - dAdx[i] * (dudx ** 2 - 2 * dudx * dudx_adiabat + dudx_adiabat ** 2) \
+#                      - 2 * A[i] * (
+#                              dudx * d2udx2 - d2udx2 * dudx_adiabat - dudx * d2udx2_adiabat + dudx_adiabat * d2udx2_adiabat) \
+#                      + source_term
+#
+#     #     # bottom bdy condition using constant flux - can assume diffusion only
+#     #     rhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
+#
+#     # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
+#     rhs[0] = 0
+#
+#     return rhs / (rho * cp)
+#
+#
+# # function to calculate dT/dt for each z (evaluated at array of temperatures u)
+# # like the above but as analytic as possible
+# def calc_total_heating_rate_analytic(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function, g_function, kc,
+#                                      alpha, rho, cp,
+#                                      gravity, L, l_kwargs, eta_kwargs, g_kwargs):
+#     N = len(u)
+#     rhs = np.zeros(N)
+#     rhs[-1] = 0  # surface boundary condution, dT/dt = 0 because constant T
+#
+#     source_term = g_function(t, xprime, **g_kwargs)
+#
+#     # update eta(T)
+#     eta = eta_function(u, xprime, **eta_kwargs)
+#
+#     # isoviscous case can be done analytically
+#     lp, dldx = l_function(xprime, **l_kwargs)
+#     l = lp * L  # dimensionalise
+#     f = alpha * rho ** 2 * cp * gravity / (18 * eta)
+#     df = np.gradient(f, dx)  # a bit too complicated to do analytically
+#     g = l ** 4
+#     dg = 4 * l ** 3 * dldx
+#
+#     A = f * g
+#
+#     try:
+#         dAdx = (f * dg) + (df * g)
+#     except ValueError:
+#         assert len(df) == 0  # f is a scalar, df is here an empty list (actually =0)
+#         dAdx = f * dg
+#
+#     # fig, ax = plt.subplots(1, 2)
+#     # ax[0].plot(zp, A)
+#     # ax[1].plot(zp, dAdx)
+#     # ax[0].set_ylabel('A')
+#     # ax[1].set_ylabel('dAdx')
+#     # ax[0].legend(['t={:.3f} Myr'.format(t / years2sec * 1e-6)])
+#     # plt.show()
+#
+#     # building profile from top
+#     for i in range(N - 2, 0, -1):
+#
+#         # discretize derivatives - central differences
+#         d2udx2 = (u[i + 1] - 2 * u[i] + u[i - 1]) / (dx ** 2)  # second order finite difference
+#         dudx = (u[i + 1] - u[i - 1]) / (2 * dx)  # central difference
+#         dudx_adiabat = dudx_ambient_function(u[i], xprime, alpha, cp, gravity)
+#         d2udx2_adiabat = -alpha / cp * gravity * dudx  # temp - assuming virtually constant alpha, cp, g
+#
+#         # check for convection
+#         if abs(dudx_adiabat) > abs(dudx):  # -ve kv, no convection
+#             rhs[i] = kc * d2udx2 + source_term
+#         #             print('kv = 0 at z =', i)
+#         else:
+#             rhs[i] = kc * d2udx2 - dAdx[i] * (dudx ** 2 - 2 * dudx * dudx_adiabat + dudx_adiabat ** 2) \
+#                      - 2 * A[i] * (
+#                              dudx * d2udx2 - d2udx2 * dudx_adiabat - dudx * d2udx2_adiabat + dudx_adiabat * d2udx2_adiabat) \
+#                      + source_term
+#
+#         # bottom bdy condition using constant flux - can assume diffusion only
+#         rhs[0] = (kc/dx**2)*(2*u[1] + 2*dx*du0dx(t) - 2*u[0]) + source_term
+#
+#     # # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
+#     # rhs[0] = 0
+#
+#     return rhs / (rho * cp)
 
 
 ############################### tests #############################################
@@ -352,8 +355,7 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
     """ test generic case """
     from MLTMantle import get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law
     import matplotlib.pyplot as plt
-    import PlanetInterior as planet
-    import melting_functions as melt
+    from PlanetInterior import pt_profile
 
     def internal_heating_constant(t, x, **kwargs):
         return 1e-12  # W kg-1, for testing
@@ -362,7 +364,8 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
         return 10 ** 21
 
     # set up grid
-    L = 3000e3  # length scale
+    Rc, Rp = 3475e3, 6370e3
+    L = Rp - Rc  # length scale
     D = 1  # dimensionless length scale
     zp = np.linspace(0, 1, N)  # dimensionless height
 
@@ -402,10 +405,14 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
     Tsurf = 300
     Tcmb0 = 2850
 
+    # constant pressure structure - evaluate at some Tp but should be roughly independent of Tp
+    pressures = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N, alpha=[alpha] * N,
+                           cp=[cp] * N, psurf=1, Tp=1700)  # Pa
+
     U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
 
     ivp_args2 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, viscosity_constant,
-                 internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l)
+                 internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures)
     soln2 = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args2, verbose=verbose, show_progress=True,
                       writefile=writefile, max_step=max_step)
 
@@ -446,9 +453,11 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
     from MLTMantle import get_mixing_length_and_gradient_smooth, exponential_viscosity_law, Arrhenius_viscosity_law
     from MLTMantleCalibrated import get_mixing_length_calibration
     import matplotlib.pyplot as plt
+    from PlanetInterior import pt_profile
 
     # set up grid/domain
-    L = 3000e3  # length scale
+    Rc, Rp = 3475e3, 6370e3
+    L = Rp - Rc  # length scale
     D = 1  # dimensionless length scale
     zp = np.linspace(0, 1, N)  # dimensionless height
     dx = (zp[1] - zp[0]) * L
@@ -466,6 +475,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
     # dimensionless convective parameters
     RaH = 1e7
     dEta = 1e5
+
     # mixing length calibration (stagnant lid mixed heated)
     # alpha_mlt = 0.2895
     # beta_mlt = 0.6794
@@ -484,15 +494,20 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
     H0 = 3.4e-11  # 1e-12  # W/kg
     kappa = kc / (rho * cp)
 
+    # constant pressure structure - evaluate at some Tp but should be roughly independent of Tp
+    pressures = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N, alpha=[alpha] * N,
+                           cp=[cp] * N, psurf=1, Tp=1700)  # Pa
+
     # boundary conditions
     Tsurf = 300
     Tcmb0 = 2850
     U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
-    g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
+    # g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
     g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
-    eta_kwargs_Arr = {'eta_ref': 1e21, 'T_ref': 1600, 'Ea': 300e3}
+    # eta_kwargs_Arr = {'eta_ref': 1e21, 'T_ref': 1600, 'Ea': 300e3}  # no pressure-dependence, with ref. viscosity
+    eta_kwargs_Arr = {}  # Tachninami
 
     # # plot internal heating
     # plt.figure()
@@ -507,12 +522,13 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
 
     # viscosity at fixed T_cmb
     # eta_b =  alpha * rho ** 2 * gravity * H * L ** 5 / (kappa * kc * RaH)
-    eta_b = Arrhenius_viscosity_law(Tcmb0, None, **eta_kwargs_Arr)
-    print('eta_b', eta_b)
+    # eta_b = Arrhenius_viscosity_law(Tcmb0, None, **eta_kwargs_Arr)
+    # print('eta_b', eta_b)
 
     ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, Arrhenius_viscosity_law,
                 rad_heating_forward, kc, alpha, rho, cp, gravity, L,
-                l_kwargs, eta_kwargs_Arr, g_kwargs_decay, l)  # needs to match signature to heating_rate_function
+                l_kwargs, eta_kwargs_Arr, g_kwargs_decay, l,
+                pressures)  # needs to match signature to heating_rate_function
     soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args,
                      verbose=True, show_progress=True, max_step=max_step, writefile=writefile)
 
@@ -561,12 +577,144 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
         ax[2].set_ylabel('H (W/m3)')
         ax[2].legend()
 
+        plt.tight_layout()
         if figpath is not None:
             fig.savefig(figpath, bbox_inches='tight')
         else:
             plt.show()
 
 
-# test_isoviscous(writefile='isoviscous.h5py')
-# test_arrhenius_radheating(N=1000, Nt_min=1000, writefile='output/tests/radheating.h5py', plot=True,
-#                           figpath='figs_scratch/radheating.pdf')
+def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=True, writefile=None, plot=True,
+                     figpath=None):
+    """ test generic case """
+    from MLTMantle import (get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure)
+    # from MLTMantleCalibrated import get_mixing_length_calibration
+    import matplotlib.pyplot as plt
+    from PlanetInterior import pt_profile
+
+    # set up grid/domain
+    Rc, Rp = 3475e3, 6370e3
+    L = Rp - Rc  # length scale
+    D = 1  # dimensionless length scale
+    zp = np.linspace(0, 1, N)  # dimensionless height
+    dx = (zp[1] - zp[0]) * L
+    t0, tf = t_buffer_Myr * 1e6 * years2sec, age_Gyr * 1e9 * years2sec  # seconds
+
+    try:
+        max_step = (tf - t0) / Nt_min
+        if verbose:
+            print('max step:', max_step / years2sec, 'years')
+    except ZeroDivisionError:
+        max_step = np.inf
+        if verbose:
+            print('max step: inf')
+
+    # dimensionless convective parameters
+    # RaH = 1e7
+    # dEta = 1e5
+    # mixing length calibration (stagnant lid mixed heated)
+    # alpha_mlt = 0.2895
+    # beta_mlt = 0.6794
+    # alpha_mlt, beta_mlt = get_mixing_length_calibration(RaH, dEta)
+    # if verbose:
+    #     print('alpha_mlt', alpha_mlt, 'beta_mlt', beta_mlt)
+
+    # constants
+    alpha_mlt, beta_mlt = 0.82, 1  # Tachinami 2011
+    lp, dldx = get_mixing_length_and_gradient_smooth(zp, alpha_mlt, beta_mlt)
+    l = lp * L
+    cp = 1190  # J/kg/K
+    alpha = 3e-5
+    gravity = 10
+    kc = 5
+    rho = 4500  # kg/m3
+    kappa = kc / (rho * cp)
+
+    # constant pressure structure - evaluate at some Tp but should be roughly independent of Tp
+    pressures = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N, alpha=[alpha] * N,
+                           cp=[cp] * N, psurf=1, Tp=1700)  # Pa
+
+    # boundary conditions
+    Tsurf = 300
+    Tcmb0 = 2500  # only used for initial condition, bc is constant flux
+    U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
+
+    l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
+    # g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
+    g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
+    # eta_kwargs_Arr = {'eta_ref': 1e21, 'T_ref': 1600, 'Ea': 300e3}  # no pressure-dependence, with ref. viscosity
+    eta_kwargs = {}  # Tackley - kwargs hardcoded into function for the time being
+
+    # # plot internal heating
+    # plt.figure()
+    # t = np.linspace(t0, tf)  # seconds
+    # print('tf', t[-1], 'seconds')
+    # plt.plot(t / (years2sec * 1e9), [radiogenic_heating(tt, x=None, **g_kwargs_decay) for tt in t],
+    #          label='Radiogenic heating')
+    # plt.xlabel('t (Gyr)')
+    # plt.ylabel('H (W/m3)')
+    # plt.legend()
+    # plt.show()
+
+    # viscosity at fixed T_cmb
+    # eta_b =  alpha * rho ** 2 * gravity * H * L ** 5 / (kappa * kc * RaH)
+    # eta_b = Arrhenius_viscosity_law(Tcmb0, None, **eta_kwargs_Arr)
+    # print('eta_b', eta_b)
+
+    ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, Arrhenius_viscosity_law_pressure,
+                rad_heating_forward, kc, alpha, rho, cp, gravity, L,
+                l_kwargs, eta_kwargs, g_kwargs_decay, l,
+                pressures)  # needs to match signature to heating_rate_function
+    soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args,
+                     verbose=True, show_progress=True, max_step=max_step, writefile=writefile)
+
+    # eta_kwargs2 = {'Tsurf': Tsurf, 'Tcmb': Tcmb0, 'dEta': dEta, 'eta_b': eta_b}
+    # ivp_args2 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, exponential_viscosity_law,
+    #              internal_heating_constant, kc, alpha, rho, cp, gravity, L,
+    #              l_kwargs, eta_kwargs2, g_kwargs, l)  # needs to match signature to heating_rate_function
+    # soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args2, verbose=True, writefile=writefile)
+    #
+    # ivp_args3 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, Arrhenius_viscosity_law,
+    #             internal_heating_constant, kc, alpha, rho, cp, gravity, L,
+    #             l_kwargs, eta_kwargs_Arr, g_kwargs_constant, l)  # needs to match signature to heating_rate_function
+    # soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args3,
+    #                  verbose=verbose, show_progress=True, max_step=max_step, writefile=writefile)
+
+    if plot:
+        # plot
+        fig, ax = plt.subplots(1, 3)
+
+        n = -1
+        ax[0].plot(zp, soln.y[:, n], label='Arrhenius')
+        # plt.plot(zp, soln2.y[:, n], label='exponential')
+        ax[0].set_xlabel('z/L')
+        ax[0].set_ylabel('T (K)')
+        ax[0].set_title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
+        ax[0].legend()
+
+        # i = N - 1
+        # plt.figure()
+        # plt.plot(soln.t / years2sec * 1e-6, soln.y[i, :])
+        # plt.xlabel('time (Myr)')
+        # plt.ylabel('Surface temperature (K)')
+
+        n = 0  # initial
+        ax[1].plot(zp, np.log10(Arrhenius_viscosity_law(soln.y[:, n], zp, **eta_kwargs_Arr)), label='Arrhenius')
+        # ax[1].plot(zp, np.log10(
+        #     exponential_viscosity_law(soln2.y[:, n], zp, **eta_kwargs2)), label='exponential')
+        ax[1].set_xlabel('z/L')
+        ax[1].set_ylabel(r'log$\eta$')
+        ax[1].set_title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
+
+        # internal heating
+        ax[2].plot(soln.t / (years2sec * 1e9), [rad_heating_forward(tt, x=None, **g_kwargs_decay) for tt in soln.t],
+                   label='Radiogenic heating')
+        ax[2].set_xlabel('t (Gyr)')
+        ax[2].set_ylabel('H (W/m3)')
+        ax[2].legend()
+
+        plt.tight_layout()
+        if figpath is not None:
+            fig.savefig(figpath, bbox_inches='tight')
+        else:
+            plt.show()

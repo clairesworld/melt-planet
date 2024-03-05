@@ -10,6 +10,7 @@ years2sec = 3.154e7
 default_attr = {'Tsurf': 300,  # surface temperature (K)
                 }
 
+
 def smooth_piecewise(x, x_threshold, f_left, f_right, df_left, df_right, smoothing_distance=0.05):
     """
     make a linear piecewise function C1 smooth (continuous first derivatives) around threshold point
@@ -50,16 +51,17 @@ def smooth_piecewise(x, x_threshold, f_left, f_right, df_left, df_right, smoothi
     return f_smooth(x), df_smooth(x)  # ensure this stays above 0
 
 
-def get_mixing_length_and_gradient_smooth(z, alpha_mlt, beta_mlt, l_smoothing_distance=0.05, **kwargs):
-    """ function to calculate value of mixing length at z - nondimensional """
+def get_mixing_length_and_gradient_smooth(z, alpha_mlt=0.82, beta_mlt=1, l_smoothing_distance=0.05, **kwargs):
+    """ function to calculate value of mixing length at z - nondimensional
+    for Tachninami 2011, beta=1 and alpha=0.82"""
     D = 1  # dimensionless mantle height
 
     # values for Ra = 1e7 and dEta = 1e6
     # for now these parameters are as in Wagner but might not be generalisable?
-    alpha_mlt = 0.2895
-    beta_mlt = 0.6794
+    # alpha_mlt = 0.2895
+    # beta_mlt = 0.6794
 
-    # singularity point where mixing length is maximum
+    # singularity point where mixing length is maximum (effective distance to nearest boundary)
     z_threshold = D / 2 * beta_mlt
 
     # define original piecewise function for mixing length
@@ -74,29 +76,59 @@ def get_mixing_length_and_gradient_smooth(z, alpha_mlt, beta_mlt, l_smoothing_di
     return np.maximum(l_smooth, 1e-5), dl_smooth  # ensure l > 0
 
 
-def exponential_viscosity_law(T, z, dEta, Tsurf, Tcmb, alpha=None, rho=None, gravity=None, L=None, kappa=None, kc=None,
+def exponential_viscosity_law(T, P, dEta, Tsurf, Tcmb, alpha=None, rho=None, gravity=None, L=None, kappa=None, kc=None,
                               RaH=None, H=None, eta_b=None, **kwargs):
     """ find viscosity at (dimensional) temperature given viscosity contrast and Ra """
-    # # find eta_b from RaH
-    # try:
-    #     eta_b = alpha[0] * rho[0] ** 2 * gravity[0] * H * L ** 5 / (kappa[0] * kc[0] * RaH)
-    # except TypeError:
-    #     # all scalars
-    #     eta_b = alpha * rho ** 2 * gravity * H * L ** 5 / (kappa * kc * RaH)
-
     # scale to T' given d' and deta
     # for fixed temperature contrast
     Tprime = (T - Tsurf) / abs((Tsurf - Tcmb))
-
     return eta_b * np.exp(np.log(dEta) * (1 - Tprime))
 
 
-def Arrhenius_viscosity_law(T, z, eta_ref, T_ref, Ea, **kwargs):
+def Arrhenius_viscosity_law(T, P, eta_ref, T_ref, Ea, **kwargs):
     Rb = 8.314
     return eta_ref * np.exp(Ea / Rb * (T ** -1 - T_ref ** -1))
 
 
-def constant_viscosity_law(T, x, eta0=1e20, **kwargs):
+def Arrhenius_viscosity_law_pressure(T, P, **kwargs):
+    # must be able to return iterable if T/P iterable
+    # P in Pa
+    # Tackley 2013 eq 2-4, Table 2
+    Rb = 8.314
+
+    def f(T, P, E0, V0, P_decay, eta0, T0=1600):
+        V = V0 * np.exp(-P / P_decay)
+        H = E0 + P * V
+        H0 = E0
+        return eta0 * np.exp((H / (Rb * T)) - (H0 / (Rb * T0)))
+
+    eta = np.where(P < PlanetInterior.P_pv_in,  # condition
+                   f(T, P, 300e3, 5e-6, np.inf, 1e21),  # upper mantle
+                   f(T, P, 370e3, 3.65e-6, 200e9, 3e23)  # lower mantle
+                   )
+
+    # truncate
+    eta = np.maximum(eta, 1e19)
+    eta = np.minimum(eta, 1e40)
+    return eta
+
+
+# def Arrhenius_viscosity_law_pressure(T, P, **kwargs):
+#     # must be able to return iterable if T/P iterable
+#     # P in Pa
+#     # Tachinami eq 15
+#     Rb = 8.314
+#
+#     def f(T, P, B, n, E, V, ep):
+#         return 1/2 * ( 1/(B ** (1/n)) * np.exp((E + P * V)/(n * Rb * T)) ) * ep ** ((1 - n)/n)
+#
+#     return np.where(P < PlanetInterior.P_pv_in,  # condition
+#              f(T, P, 3.5e-15, 3.0, 430e3, 10e-6, 1e-15),  # upper mantle
+#              f(T, P, 7.4e-17, 3.5, 500e3, 10e-6, 1e-15)  # lower mantle
+#                     )
+
+
+def constant_viscosity_law(T, P, eta0=1e20, **kwargs):
     return eta0
 
 
@@ -198,7 +230,8 @@ class MLTMantle:
         i_base = self.planet.i_cmb + 1
 
         # dimensional radius
-        self.r = np.linspace(self.planet.radius[i_base], self.planet.radius[-1], num=self.Nm, endpoint=True)  # z prime from 0->1
+        self.r = np.linspace(self.planet.radius[i_base], self.planet.radius[-1], num=self.Nm,
+                             endpoint=True)  # z prime from 0->1
         self.d = self.r[-1] - self.r[0]
 
         # get dimensional mantle values
@@ -277,13 +310,14 @@ class MLTMantle:
               viscosity_law=exponential_viscosity_law,
               internal_heating_function=None,
               radiogenic_conentration_factor=1,
-              H0=1e26/4e24,
+              H0=1e26 / 4e24,
               mixing_length_kwargs=None,
               viscosity_kwargs=None,
               internal_heating_kwargs=None,
               max_step=1e6 * years2sec,
               show_progress=False, verbose=False, plot=True):
-        from HeatTransferSolver import solve_pde, initial, calc_total_heating_rate_numeric, internal_heating_decaying, radiogenic_heating
+        from HeatTransferSolver import solve_pde, initial, calc_total_heating_rate_numeric, internal_heating_decaying, \
+            radiogenic_heating
 
         # get necessary thermal evolution kwargs
         if viscosity_kwargs is None:
@@ -303,7 +337,6 @@ class MLTMantle:
         lp, dldx = get_mixing_length_and_gradient_smooth(self.zp, **mixing_length_kwargs)
         l = lp * self.d  # dimensionalise
 
-
         U_0 = initial(self.zp, self.Tsurf, self.Tcmb0)  # initial temperature
 
         # args for heating_rate_function in HeatTransferSolver, needs to match signature to heating_rate_function
@@ -318,5 +351,3 @@ class MLTMantle:
                          max_step=max_step, verbose=verbose, show_progress=show_progress)
 
         return soln
-
-

@@ -52,6 +52,13 @@ def pt_profile(n, radius, density, gravity, alpha, cp, psurf, Tp, i_cmb=None, de
     return pressure, temperature  # Pa, K
 
 
+def pressure_lookup(z_of_interest, pressure_list):
+    """ get pressure from dimensionless depth """
+    z_list = list(np.linspace(0, 1, len(pressure_list)))
+    # find pressure in pressure_list closest to z target
+    return pressure_list[z_list.index(z_of_interest)]
+
+
 class PlanetInterior:
 
     def __init__(self, name='default', M=M_E, CMF=0.325, Psurf=1000, Tp=1600, deltaT_tbl=1000, deltaT_cmb=0,

@@ -41,6 +41,14 @@ def T_liquidus_chondrite(P):
     return T0 * (P/a + 1) ** (1/c)
 
 
+def T_solidus_H2000(P):
+    # peridotite solidus from Hirschmann 2000 Table 2, P in GPa
+    a = -5.1404654
+    b = 132.899012
+    c = 1120.66061
+    return a * P ** 2 + b * P + c
+
+
 def T_at_95(Tavg, Thot, n95=1 / 3):
     # T profile corresponding to cdf of 95%
     return n95*Tavg + (1 - n95)*Thot
