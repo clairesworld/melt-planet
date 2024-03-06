@@ -586,18 +586,68 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
 
 
 def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=True, writefile=None, plot=True,
-                     figpath=None):
+                     figpath=None, Mantle=None):
     """ test generic case """
     from MLTMantle import (get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure)
     # from MLTMantleCalibrated import get_mixing_length_calibration
     import matplotlib.pyplot as plt
     from PlanetInterior import pt_profile
 
-    # set up grid/domain
-    Rc, Rp = 3475e3, 6370e3
+    # dimensionless convective parameters
+    # RaH = 1e7
+    # dEta = 1e5
+    # mixing length calibration (stagnant lid mixed heated)
+    # alpha_mlt = 0.2895
+    # beta_mlt = 0.6794
+    # alpha_mlt, beta_mlt = get_mixing_length_calibration(RaH, dEta)
+    # if verbose:
+    #     print('alpha_mlt', alpha_mlt, 'beta_mlt', beta_mlt)
+
+    if Mantle is None:
+        # set up grid/domain
+        Rc, Rp = 3475e3, 6370e3
+        zp = np.linspace(0, 1, N)  # dimensionless height
+
+        # thermodynamic parameters
+        cp = 1190  # J/kg/K
+        alpha = 3e-5
+        gravity = 10
+        kc = 5
+        rho = 4500  # kg/m3
+        kappa = kc / (rho * cp)
+
+        # boundary conditions
+        Tsurf = 300
+        Tcmb0 = 2500  # only used for initial condition, bc is constant flux
+
+        # constant pressure structure - evaluate at some Tp but should be roughly independent of Tp
+        pressures, Tp = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N,
+                                   alpha=[alpha] * N, cp=[cp] * N, psurf=1, Tp=1700)  # Pa
+
+    else:
+        # set up grid/domain
+        N = Mantle.Nm
+        Rp, Rc = Mantle.r[-1], Mantle.r[0]
+        zp = Mantle.zp
+
+        # thermodynamic paramters
+        cp = Mantle.cp_m
+        alpha = Mantle.alpha_m
+        gravity = Mantle.g_m
+        kc = Mantle.k_m
+        rho = Mantle.rho_m
+        kappa = Mantle.kappa_m
+
+        # boundary conditions
+        Tsurf = Mantle.Tsurf
+        Tcmb0 = Mantle.Tcmb0  # only used for initial condition, bc is constant flux
+
+        # pressure profile
+        pressures = Mantle.P
+        Tp = Mantle.T_adiabat
+
     L = Rp - Rc  # length scale
     D = 1  # dimensionless length scale
-    zp = np.linspace(0, 1, N)  # dimensionless height
     dx = (zp[1] - zp[0]) * L
     t0, tf = t_buffer_Myr * 1e6 * years2sec, age_Gyr * 1e9 * years2sec  # seconds
 
@@ -610,34 +660,11 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
         if verbose:
             print('max step: inf')
 
-    # dimensionless convective parameters
-    # RaH = 1e7
-    # dEta = 1e5
-    # mixing length calibration (stagnant lid mixed heated)
-    # alpha_mlt = 0.2895
-    # beta_mlt = 0.6794
-    # alpha_mlt, beta_mlt = get_mixing_length_calibration(RaH, dEta)
-    # if verbose:
-    #     print('alpha_mlt', alpha_mlt, 'beta_mlt', beta_mlt)
-
-    # constants
+    # MLT constants
     alpha_mlt, beta_mlt = 0.82, 1  # Tachinami 2011
     lp, dldx = get_mixing_length_and_gradient_smooth(zp, alpha_mlt, beta_mlt)
     l = lp * L
-    cp = 1190  # J/kg/K
-    alpha = 3e-5
-    gravity = 10
-    kc = 5
-    rho = 4500  # kg/m3
-    kappa = kc / (rho * cp)
 
-    # constant pressure structure - evaluate at some Tp but should be roughly independent of Tp
-    pressures, Tp = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N,
-                               alpha=[alpha] * N, cp=[cp] * N, psurf=1, Tp=1700)  # Pa
-
-    # boundary conditions
-    Tsurf = 300
-    Tcmb0 = 2500  # only used for initial condition, bc is constant flux
     U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
@@ -700,7 +727,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
         # plt.ylabel('Surface temperature (K)')
 
         n = 0  # initial
-        ax[1].plot(zp, np.log10(Arrhenius_viscosity_law(soln.y[:, n], zp, **eta_kwargs_Arr)), label='Arrhenius')
+        ax[1].plot(zp, np.log10(Arrhenius_viscosity_law_pressure(soln.y[:, n], zp, **eta_kwargs)), label='Arrhenius')
         # ax[1].plot(zp, np.log10(
         #     exponential_viscosity_law(soln2.y[:, n], zp, **eta_kwargs2)), label='exponential')
         ax[1].set_xlabel('z/L')

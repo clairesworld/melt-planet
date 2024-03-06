@@ -59,6 +59,12 @@ def pressure_lookup(z_of_interest, pressure_list):
     return pressure_list[z_list.index(z_of_interest)]
 
 
+def loadinterior(filepath):
+    import pickle as pkl
+    with open(filepath, "rb") as pfile:
+        return pkl.load(pfile)
+
+
 class PlanetInterior:
 
     def __init__(self, name='default', M=M_E, CMF=0.325, Psurf=1000, Tp=1600, deltaT_tbl=1000, deltaT_cmb=0,
@@ -312,7 +318,7 @@ class PlanetInterior:
         plt.tight_layout()
 
         if save:
-            fig.savefig(fig_path + 'structure_r.pdf', bbox_inches='tight')
+            fig.savefig(fig_path + self.name + '_structure_r.pdf', bbox_inches='tight')
         return fig, ax
 
     def plot_structure_p(self, c='k', fig_path='figs_scratch/', fig=None, ax=None, save=True, label=None, **kwargs):
@@ -351,6 +357,11 @@ class PlanetInterior:
         plt.tight_layout()
 
         if save:
-            fig.savefig(fig_path + 'structure_p.pdf', bbox_inches='tight')
+            fig.savefig(fig_path + self.name + '_structure_p.pdf', bbox_inches='tight')
         return fig, ax
+
+    def save(self, output_path):
+        import pickle as pkl
+        with open(output_path + self.name + '_struct.pkl', "wb") as pfile:
+            pkl.dump(self, pfile)
 

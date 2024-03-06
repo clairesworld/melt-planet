@@ -316,8 +316,7 @@ class MLTMantle:
               internal_heating_kwargs=None,
               max_step=1e6 * years2sec,
               show_progress=False, verbose=False, plot=True):
-        from HeatTransferSolver import solve_pde, initial, calc_total_heating_rate_numeric, internal_heating_decaying, \
-            radiogenic_heating
+        from HeatTransferSolver import solve_pde, initial, calc_total_heating_rate_numeric
 
         # get necessary thermal evolution kwargs
         if viscosity_kwargs is None:
@@ -351,3 +350,6 @@ class MLTMantle:
                          max_step=max_step, verbose=verbose, show_progress=show_progress)
 
         return soln
+
+
+
