@@ -195,11 +195,6 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
 
     # update viscosity
     eta = eta_function(u, pressures, **eta_kwargs)
-    # print('viscosity range', eta[0], eta[-1], 'Pa s')
-    # print('eta', eta)
-    # print('T range', u[0], u[-1], 'K')
-
-    print('u', np.shape(u))
 
     if l is None:
         # update mixing length
