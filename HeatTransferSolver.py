@@ -199,6 +199,8 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     # print('eta', eta)
     # print('T range', u[0], u[-1], 'K')
 
+    print('u', np.shape(u))
+
     if l is None:
         # update mixing length
         lp, _ = l_function(xprime, **l_kwargs)
@@ -228,7 +230,11 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     lhs[-1] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
 
     # bottom bdy condition using constant flux - can assume diffusion only
-    lhs[0] = (kc / dx ** 2) * (2 * u[1] + 2 * dx * du0dx(t) - 2 * u[0]) + source_term
+    try:
+        lhs[0] = (kc / dx ** 2) * (2 * u[1] + 2 * dx * du0dx(t) - 2 * u[0]) + source_term
+    except ValueError:
+        # source term and/or kc is a vector - todo make it always a vector?
+        lhs[0] = (kc[0] / dx ** 2) * (2 * u[1] + 2 * dx * du0dx(t) - 2 * u[0]) + source_term[0]
 
     # # alternatively, for a constant T bottom boundary condition, fix at Tcmb0 with du/dt=0:
     # lhs[0] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
