@@ -306,17 +306,16 @@ class MLTMantle:
         """" steady state solution """
         raise NotImplementedError
 
-    def solve(self, t0_Gyr, tf_Gyr, t0_buffer_Gyr=0,
-              viscosity_law=exponential_viscosity_law,
+    def solve(self, t0_Gyr, tf_Gyr, t0_buffer_Gyr=0, Nt_min=1000,
+              viscosity_law=None,
               internal_heating_function=None,
               radiogenic_conentration_factor=1,
-              H0=1e26 / 4e24,
               mixing_length_kwargs=None,
               viscosity_kwargs=None,
               internal_heating_kwargs=None,
               max_step=1e6 * years2sec,
-              show_progress=False, verbose=False, plot=True):
-        from HeatTransferSolver import solve_pde, initial, calc_total_heating_rate_numeric
+              show_progress=False, verbose=False, plot=True, writefile=None):
+        import HeatTransferSolver as hts
 
         # get necessary thermal evolution kwargs
         if viscosity_kwargs is None:
@@ -324,32 +323,59 @@ class MLTMantle:
         if mixing_length_kwargs is None:
             mixing_length_kwargs = {}
         if internal_heating_kwargs is None:
-            internal_heating_kwargs = {'age_Gyr': tf_Gyr, 'x_Eu': radiogenic_conentration_factor, 'rho': self.rho_m,
-                                       't0_buffer_Gyr': t0_buffer_Gyr}
-            # internal_heating_kwargs = {'H_0': None, 'rho': self.rho_m,
-            #                            't0_buffer_Gyr': t0_buffer_Gyr}
+            internal_heating_kwargs = {}
 
-        if internal_heating_function is None:
-            internal_heating_function = radiogenic_heating
+        # set up grid/domain
+        N = self.Nm
+        Rp, Rc = self.r[-1], self.r[0]
+        zp = self.zp
+        dx = self.m
+        L = Rp - Rc  # length scale
+        D = 1  # dimensionless length scale
+
+        # thermodynamic paramters
+        cp = self.cp_m
+        alpha = self.alpha_m
+        gravity = self.g_m
+        kc = self.k_m
+        rho = self.rho_m
+        kappa = self.kappa_m
+
+        # boundary conditions
+        Tsurf = self.Tsurf
+        Tcmb0 = self.Tcmb0  # only used for initial condition, bc is constant flux
+
+        # pressure profile
+        pressures = self.P
+        Tp = self.T_adiabat
 
         # static mixing length
-        lp, dldx = get_mixing_length_and_gradient_smooth(self.zp, **mixing_length_kwargs)
+        lp, dldx = get_mixing_length_and_gradient_smooth(zp, **mixing_length_kwargs)
         l = lp * self.d  # dimensionalise
 
-        U_0 = initial(self.zp, self.Tsurf, self.Tcmb0)  # initial temperature
+        U_0 = hts.initial(zp, Tsurf, Tcmb0)  # initial temperature
 
-        # args for heating_rate_function in HeatTransferSolver, needs to match signature to heating_rate_function
-        ivp_args = (self.m, self.zp, get_mixing_length_and_gradient_smooth, PlanetInterior.adiabatic_lapse_rate,
-                    viscosity_law,
-                    internal_heating_function, self.k_m, self.alpha_m, self.rho_m, self.cp_m, self.g_m, self.d,
-                    mixing_length_kwargs, viscosity_kwargs, internal_heating_kwargs, l)
+        # args for heating_rate_function in HeatTransferSolver
+        # needs to match signature to heating_rate_function
+        ivp_args = (
+            dx, zp, get_mixing_length_and_gradient_smooth, hts.dudx_ambient, viscosity_law,
+            internal_heating_function, kc, alpha, rho, cp, gravity, L,
+            mixing_length_kwargs, viscosity_kwargs, internal_heating_kwargs, l,
+            pressures)
 
-        soln = solve_pde(t0_Gyr * years2sec * 1e9, tf_Gyr * years2sec * 1e9, U_0,
-                         calc_total_heating_rate_numeric,
-                         ivp_args,
-                         max_step=max_step, verbose=verbose, show_progress=show_progress)
+        if t0_buffer_Gyr is not None:
+            # run for long enough to reach a steady state at constant H
+            max_step = hts.get_max_step(t0, tf, max_step, Nt_min, verbose)
+            soln = hts.solve_pde(t0, tf, U_0, hts.calc_total_heating_rate_numeric, ivp_args,
+                                 verbose=verbose, show_progress=True, max_step=max_step, writefile=False)
+
+        else:
+            # solve from initial U_0
+            U_0 = U_0
+
+        t0, tf = t0_buffer_Gyr * 1e9 * years2sec, tf_Gyr * 1e9 * years2sec  # seconds
+
+        soln = hts.solve_pde(t0, tf, U_0, hts.calc_total_heating_rate_numeric, ivp_args,
+                             verbose=verbose, show_progress=True, max_step=max_step, writefile=writefile)
 
         return soln
-
-
-

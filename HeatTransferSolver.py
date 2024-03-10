@@ -26,22 +26,22 @@ def du0dx(t):
 
 ####################### heat transfer functions ###################
 
-def dudx_ambient_constants(u, x, alpha, cp, gravity):
+def dudx_ambient(u, x, alpha, cp, gravity):
     """ "ambient" T profile at dimensionless z where alpha, cp, gravity are scalars"""
     return -alpha / cp * gravity * u
 
 
-def dudx_ambient_vectors(u, x, alpha, cp, gravity):
-    """ "ambient" T profile at dimensionless x (scalar) where alpha, cp, gravity are vectors"""
-    try:
-        # return entire profile
-        assert np.size(alpha) == np.size(u)
-        return -alpha / cp * gravity * u
-    except AssertionError:
-        # return value at single depth
-        assert np.size(x) == 1
-        n = int(np.round(x * (len(alpha) - 1)))  # get index -- z from 0 to 1 --- confirmed this works for all n
-        return -alpha[n] / cp[n] * gravity[n] * u
+# def dudx_ambient_vectors(u, x, alpha, cp, gravity):
+#     """ "ambient" T profile at dimensionless x (scalar) where alpha, cp, gravity are vectors"""
+#     try:
+#         # return entire profile
+#         assert np.size(alpha) == np.size(u)
+#         return -alpha / cp * gravity * u
+#     except AssertionError:
+#         # return value at single depth
+#         assert np.size(x) == 1
+#         n = int(np.round(x * (len(alpha) - 1)))  # get index -- z from 0 to 1 --- confirmed this works for all n
+#         return -alpha[n] / cp[n] * gravity[n] * u
 
 
 def convective_coefficient(alpha, rho, cp, gravity, l, eta, dudx_adiabat, dudx):
@@ -93,10 +93,10 @@ def convective_coefficient(alpha, rho, cp, gravity, l, eta, dudx_adiabat, dudx):
 #     return h_perkg * rho
 
 
-def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Myr=0, **kwargs):
+def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
     # O'Neill+ SSR 2020
     # 40K, 238U, 235U, 232Th
-    t_Myr = t / years2sec * 1e-6 + t_buffer_Myr
+    t_Myr = t / years2sec * 1e-6  # + t_buffer_Gyr * 1e3
 
     c0 = np.array([30.4e-9, 22.7e-9, 0.16e-9, 85e-9])  # present day BSE concentration
     c0[1:] = c0[1:] * rad_factor  # scale refractories
@@ -412,7 +412,7 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
 
     U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
 
-    ivp_args2 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, viscosity_constant,
+    ivp_args2 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, viscosity_constant,
                  internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l,
                  pressures)
     soln2 = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args2, verbose=verbose, show_progress=True,
@@ -527,7 +527,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
     # eta_b = Arrhenius_viscosity_law(Tcmb0, None, **eta_kwargs_Arr)
     # print('eta_b', eta_b)
 
-    ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, Arrhenius_viscosity_law,
+    ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, Arrhenius_viscosity_law,
                 rad_heating_forward, kc, alpha, rho, cp, gravity, L,
                 l_kwargs, eta_kwargs_Arr, g_kwargs_decay, l,
                 pressures)  # needs to match signature to heating_rate_function
@@ -690,7 +690,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
     # eta_b = Arrhenius_viscosity_law(Tcmb0, None, **eta_kwargs_Arr)
     # print('eta_b', eta_b)
 
-    ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, Arrhenius_viscosity_law_pressure,
+    ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, Arrhenius_viscosity_law_pressure,
                 rad_heating_forward, kc, alpha, rho, cp, gravity, L,
                 l_kwargs, eta_kwargs, g_kwargs_decay, l,
                 pressures)  # needs to match signature to heating_rate_function
@@ -747,3 +747,17 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
             fig.savefig(figpath, bbox_inches='tight')
         else:
             plt.show()
+
+
+def get_max_step(t0, tf, max_step, Nt_min, verbose=False):
+    # default is to use max step if given, else calculate from min number of time steps
+    if max_step is None:
+        try:
+            max_step = (tf - t0) / Nt_min
+            if verbose:
+                print('max step:', max_step / years2sec, 'years')
+        except ZeroDivisionError:
+            max_step = np.inf
+            if verbose:
+                print('max step: inf')
+    return max_step
