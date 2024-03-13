@@ -383,10 +383,6 @@ class MLTMantle:
                                  verbose=verbose, show_progress=True, max_step=max_step, writefile=False)
             U_0 = soln.y[:, -1]
 
-            # # find roots
-            # from scipy import optimize
-            # init = optimize.root(fun, U_0, jac=None, method='hybr')
-
         else:
             # solve from initial U_0
             U_0 = U_0

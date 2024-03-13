@@ -1,6 +1,6 @@
 import PlanetInterior as planet
 import MLTMantle as mlt
-from HeatTransferSolver import test_arrhenius_radheating, test_pdependence, rad_heating_forward
+from HeatTransferSolver import test_arrhenius_radheating, test_pdependence, rad_heating_forward, initial_steadystate, dudx_ambient
 
 name = 'Tachinami_buffered'
 
@@ -16,6 +16,14 @@ pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
 man = mlt.MLTMantle(pl, Nm=10000, verbose=False)
 # set fixed T boundary conditions/initial condition
 man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
+
+# T = initial_steadystate(man.zp, (man.zp[1] - man.zp[0]) * man.d, man.Tsurf,
+#                         man.get_mixing_length_and_gradient({'alpha_mlt': 0.82, 'beta_mlt': 1})[0],
+#                         man.rho_m, man.alpha_m, man.cp_m, man.k_m, man.g_m,dudx_ambient, man.Tsurf, man.Tcmb0,
+#                         eta_function=mlt.Arrhenius_viscosity_law_pressure, eta_kwargs=None,
+#                         g_function=rad_heating_forward, g_kwargs={},
+# dudx_ambient_function=
+#                         )
 
 soln = man.solve(t0_Gyr=0, tf_Gyr=5, t0_buffer_Gyr=5, Nt_min=1000,
                  viscosity_law=mlt.Arrhenius_viscosity_law_pressure,

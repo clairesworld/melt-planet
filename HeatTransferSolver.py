@@ -14,25 +14,52 @@ years2sec = 3.154e7
 #################### boundary conditions #########################
 
 
-def initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, k, g, eta, H, dTdz_ad):
+def initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, k, g, eta, pressures, u1, u0,
+                        eta_function=None, eta_kwargs=None, g_function=None, g_kwargs={}, dudx_ambient_function=None):
     Nm = len(z)
     T = [Tsurf] * Nm  # upper boundary condition T=0
 
-    # build steady-state T profile downwards
-    for ii in range(Nm - 1, 0, -1):
-        T2 = T[ii]
-        l2 = l[ii]
+    if eta_function is None and isinstance(eta, float):
+        H = g_function(t=0, x=z, **g_kwargs)
+        # build steady-state T profile downwards
+        for ii in range(Nm - 1, 0, -1):
+            T2 = T[ii]
+            l2 = l[ii]
+            dTdz_ad = dudx_ambient_function(T2, None, alpha, cp, g)
 
-        # from sympy solution
-        dTdz = [(alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k - 0.288675134594813 * np.sqrt(eta * (
-                    -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
-                            alpha * cp * g * l2 ** 4 * rho ** 2),
-                (alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k + 0.288675134594813 * np.sqrt(eta * (
-                            -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
-                            alpha * cp * g * l2 ** 4 * rho ** 2)]
+            # from sympy solution
+            dTdz = [(alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k - 0.288675134594813 * np.sqrt(eta * (
+                        -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
+                                alpha * cp * g * l2 ** 4 * rho ** 2),
+                    (alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k + 0.288675134594813 * np.sqrt(eta * (
+                                -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
+                                alpha * cp * g * l2 ** 4 * rho ** 2)]
 
-        # for now assume 1st solution is the -ve one and the other is +ve
-        T[ii - 1] = T2 - dTdz[0] * dz
+            # for now assume 1st solution is the -ve one and the other is +ve
+            T[ii - 1] = T2 - dTdz[0] * dz
+
+    else:
+        # find roots
+        from scipy import optimize
+        U_0 = initial_linear(z, u1, u0)
+
+        H = g_function(t=0, x=z, **g_kwargs)
+
+        def fun(x, l, rho, alpha, cp, k, g, eta, H, dTdz_ad, dx):
+            eta = eta_function(U_0, pressures, **eta_kwargs)
+            dTdz_ad = dudx_ambient_function(T2, None, alpha, cp, g)
+
+            kv = rho ** 2 * cp * alpha * g * l ** 4 / eta * (x - dTdz_ad)
+            return k * x + kv * (x - dTdz_ad) + (1 / 3) * z * H
+
+        dTdz = optimize.root(fun, U_0, args=(l, rho, alpha, cp, k, g, eta, H, dTdz_ad), jac=None, method='hybr')
+        print('dTdz', dTdz, np.shape(dTdz))
+
+        T = np.zeros_like(z)
+        T[-1] = Tsurf
+        for ii in range(len(T) - 1, 0, -1):
+            T[ii - 1] = T[ii] - dTdz[ii] * dz
+
     return T
 
 
@@ -175,6 +202,10 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_args, max_step=1e6 * years
 
     tspan = (t0, tf)
     ivp_args = ivp_args + (tspan, show_progress)
+
+    if verbose:
+        print('Solving IVP from', tspan[0] /years2sec * 1e-9, 'to', tspan[1] / years2sec * 1e-9, 'Gyr')
+
     start = time.time()
     soln = solve_ivp(heating_rate_function,
                      t_span=tspan, y0=U_0,
@@ -257,6 +288,12 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     # lhs[0] = 0  # value of du/dt at x=L - i.e. constant temperature so no dT/dt
 
     dudt = lhs / (rho * cp)
+
+    print('dudt', dudt)
+    print('eta', eta)
+    print('H', source_term)
+    print('diff term', diff_term)
+    print('adv term', adv_term)
 
     return dudt
 
