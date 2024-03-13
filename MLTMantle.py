@@ -314,7 +314,7 @@ class MLTMantle:
               viscosity_kwargs=None,
               internal_heating_kwargs=None,
               max_step=1e6 * years2sec,
-              show_progress=False, verbose=False, plot=True, writefile=None):
+              show_progress=True, verbose=False, writefile=None):
         import HeatTransferSolver as hts
 
         # get necessary thermal evolution kwargs
@@ -406,3 +406,36 @@ class MLTMantle:
                              verbose=verbose, show_progress=True, max_step=max_step, writefile=writefile)
 
         return soln
+
+
+    def plot_temperature_evol(self, soln, timestep='all', cmap='magma', figpath=None):
+        import matplotlib.pyplot as plt
+        import matplotlib.colors as mcolors
+        import matplotlib.cm as cmx
+
+        # colourise
+        cm = plt.get_cmap(cmap)
+        cNorm = mcolors.Normalize(vmin=soln.t[0], vmax=soln.t[-1])
+        scalarmap = cmx.ScalarMappable(norm=cNorm, cmap=cm)
+        c = scalarmap.to_rgba(soln.t)
+
+        # temperature evolution
+        fig = plt.figure()
+        if timestep == 'all':
+            for n in np.arange(len(soln.t))[::100]:
+                plt.plot(self.zp, soln.y[:, int(n)], c=c[n])
+        elif isinstance(timestep, int):
+            plt.plot(self.zp, soln.y[:, timestep], c=c[timestep])
+        else:
+            raise NotImplementedError
+        plt.xlabel('z/L')
+        plt.ylabel('T (K)')
+        plt.colorbar(
+            plt.gca().scatter(soln.t / years2sec * 1e-6, soln.t / years2sec * 1e-6, c=soln.t / years2sec * 1e-6,
+                              cmap='magma', s=0), label='time (Myr)')
+        # plt.gca().set_xlim(0, 1)
+        # plt.gca().set_ylim(250, 4500)
+
+        if figpath is not None:
+            fig.savefig(figpath, bbox_inches='tight')
+        # plt.show()
