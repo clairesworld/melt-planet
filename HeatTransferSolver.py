@@ -14,51 +14,65 @@ years2sec = 3.154e7
 #################### boundary conditions #########################
 
 
-def initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, k, g, eta, pressures, u1, u0,
+def initial_file(fin, outputpath="/home/claire/Works/melt-planet/output/tests/"):
+    from MLTMantle import read_h5py
+    soln = read_h5py(fin, outputpath, verbose=True)
+    return soln.y[:,-1]
+
+
+def initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, k, g, pressures, u1, u0,
                         eta_function=None, eta_kwargs=None, g_function=None, g_kwargs={}, dudx_ambient_function=None):
     Nm = len(z)
     T = [Tsurf] * Nm  # upper boundary condition T=0
 
-    if eta_function is None and isinstance(eta, float):
-        H = g_function(t=0, x=z, **g_kwargs)
-        # build steady-state T profile downwards
-        for ii in range(Nm - 1, 0, -1):
-            T2 = T[ii]
-            l2 = l[ii]
-            dTdz_ad = dudx_ambient_function(T2, None, alpha, cp, g)
+    # if eta_function is None and isinstance(eta, float):
+    H = g_function(t=0, x=z, **g_kwargs)
 
-            # from sympy solution
-            dTdz = [(alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k - 0.288675134594813 * np.sqrt(eta * (
-                        -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
-                                alpha * cp * g * l2 ** 4 * rho ** 2),
-                    (alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k + 0.288675134594813 * np.sqrt(eta * (
-                                -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
-                                alpha * cp * g * l2 ** 4 * rho ** 2)]
+    eta = eta_function(T=1900, P=pressures, **eta_kwargs)  # for initial condition take a nearly constant hot viscosity
+    eta = [1e20] * len(z)
 
-            # for now assume 1st solution is the -ve one and the other is +ve
-            T[ii - 1] = T2 - dTdz[0] * dz
+    # build steady-state T profile downwards
+    for ii in range(Nm - 1, 0, -1):
+        T2 = T[ii]
+        dTdz_ad = dudx_ambient_function(T2, None, alpha[ii], cp[ii], g[ii])
 
-    else:
-        # find roots
-        from scipy import optimize
-        U_0 = initial_linear(z, u1, u0)
+        # from sympy solution
+        dTdz = [(alpha[ii] * cp[ii] * dTdz_ad * g[ii] * l[ii] ** 4 * rho[ii] ** 2 - 0.5 * eta[ii] * k[ii] - 0.288675134594813 * np.sqrt(eta[ii] * (
+                    -4.0 * H[ii] * alpha[ii] * cp[ii] * g[ii] * l[ii] ** 4 * rho[ii] ** 2 * z[ii] - 12.0 * alpha[ii] * cp[ii] * dTdz_ad * g[ii] * k[ii] * l[ii] ** 4 * rho[ii] ** 2 + 3.0 * eta[ii] * k[ii] ** 2))) / (
+                            alpha[ii] * cp[ii] * g[ii] * l[ii] ** 4 * rho[ii] ** 2),
+                (alpha[ii] * cp[ii] * dTdz_ad * g[ii] * l[ii] ** 4 * rho[ii] ** 2 - 0.5 * eta[ii] * k[ii] + 0.288675134594813 * np.sqrt(eta[ii] * (
+                            -4.0 * H[ii] * alpha[ii] * cp[ii] * g[ii] * l[ii] ** 4 * rho[ii] ** 2 * z[ii] - 12.0 * alpha[ii] * cp[ii] * dTdz_ad * g[ii] * k[ii] * l[ii] ** 4 * rho[ii] ** 2 + 3.0 * eta[ii] * k[ii] ** 2))) / (
+                            alpha[ii] * cp[ii] * g[ii] * l[ii] ** 4 * rho[ii] ** 2)]
+        print('dTdz', dTdz)
 
-        H = g_function(t=0, x=z, **g_kwargs)
+        # for now assume 1st solution is the -ve one and the other is +ve
+        T[ii - 1] = T2 - dTdz[0] * dz
 
-        def fun(x, l, rho, alpha, cp, k, g, eta, H, dTdz_ad, dx):
-            eta = eta_function(U_0, pressures, **eta_kwargs)
-            dTdz_ad = dudx_ambient_function(T2, None, alpha, cp, g)
-
-            kv = rho ** 2 * cp * alpha * g * l ** 4 / eta * (x - dTdz_ad)
-            return k * x + kv * (x - dTdz_ad) + (1 / 3) * z * H
-
-        dTdz = optimize.root(fun, U_0, args=(l, rho, alpha, cp, k, g, eta, H, dTdz_ad), jac=None, method='hybr')
-        print('dTdz', dTdz, np.shape(dTdz))
-
-        T = np.zeros_like(z)
-        T[-1] = Tsurf
-        for ii in range(len(T) - 1, 0, -1):
-            T[ii - 1] = T[ii] - dTdz[ii] * dz
+    # else:
+    #     # find roots
+    #     from scipy import optimize
+    #     U_0 = initial_linear(z, u1, u0)
+    #
+    #     H = g_function(t=0, x=z, **g_kwargs)
+    #
+    #     def fun(x, l, rho, alpha, cp, k, g, eta, H,  dx, Tsurf, Nm):
+    #         T = [Tsurf] * Nm  # upper boundary condition T=0
+    #         for ii in range(Nm - 1, 0, -1):
+    #             T2 = x[ii]
+    #             l2 = l[ii]
+    #             dTdz_ad = dudx_ambient_function(T2, None, alpha, cp, g)
+    #             eta = eta_function(U_0, pressures, **eta_kwargs)
+    #             kv = rho ** 2 * cp * alpha * g * l ** 4 / eta * (x - dTdz_ad)
+    #
+    #         return k * x + kv * (x - dTdz_ad) + (1 / 3) * z * H
+    #
+    #     dTdz = optimize.root(fun, U_0, args=(l, rho, alpha, cp, k, g, eta, H, dx), jac=None, method='hybr')
+    #     print('dTdz', dTdz, np.shape(dTdz))
+    #
+    #     T = np.zeros_like(z)
+    #     T[-1] = Tsurf
+    #     for ii in range(len(T) - 1, 0, -1):
+    #         T[ii - 1] = T[ii] - dTdz[ii] * dz
 
     return T
 

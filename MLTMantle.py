@@ -357,8 +357,9 @@ class MLTMantle:
         internal_heating_kwargs.update({'rho': rho})  # ensure density is in internal heating to get W/m3
 
         # initial temperature profile
-        U_0 = hts.initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
+        # U_0 = hts.initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
         # U_0 = hts.initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, kc, gravity, eta, H, dTdz_ad)
+        U_0 = hts.initial_file("Tachinami.h5py", outputpath="output/tests/")
 
         if t0_buffer_Gyr > 0:
             # run for long enough to reach a steady state at constant H
@@ -436,3 +437,44 @@ class MLTMantle:
         if figpath is not None:
             fig.savefig(figpath, bbox_inches='tight')
         # plt.show()
+
+
+
+def read_h5py(fin, outputpath, verbose=True):
+    # read and plot remote runs
+
+    import h5py
+    d = {}
+    with h5py.File(outputpath + fin, "r") as f:
+        #         # Print all root level object names (aka keys)
+        #         # these can be group or dataset names
+        #         print("Keys: %s" % f.keys())
+        #         # get first object name/key; may or may NOT be a group
+        #         a_group_key = list(f.keys())[0]
+
+        #         # get the object type for a_group_key: usually group or dataset
+        #         print(type(f[a_group_key]))
+
+        #         # If a_group_key is a group name,
+        #         # this gets the object names in the group and returns as a list
+        #         data = list(f[a_group_key])
+
+        #         # If a_group_key is a dataset name,
+        #         # this gets the dataset values and returns as a list
+        #         data = list(f[a_group_key])
+        #         # preferred methods to get dataset values:
+        #         ds_obj = f[a_group_key]      # returns as a h5py dataset object
+        #         ds_arr = f[a_group_key][()]  # returns as a numpy array
+
+        if verbose:
+            s = 'loaded ' + fin + ' with datasets'
+            for i, key in list(enumerate(f.keys())):
+                s = s + ' ' + key + ' ' + str(np.shape(f[key])) + ','
+            print(s)
+
+        # get numpy arrays
+        for i, key in list(enumerate(f.keys())):
+            d[key] = f[key][()]
+
+    # return dictionary
+    return d
