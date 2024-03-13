@@ -17,7 +17,7 @@ years2sec = 3.154e7
 def initial_file(fin, outputpath="/home/claire/Works/melt-planet/output/tests/"):
     from MLTMantle import read_h5py
     soln = read_h5py(fin, outputpath, verbose=True)
-    return soln.y[:,-1]
+    return soln['y'][:,-1]
 
 
 def initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, k, g, pressures, u1, u0,

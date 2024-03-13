@@ -3,7 +3,7 @@ import MLTMantle as mlt
 from HeatTransferSolver import test_arrhenius_radheating, test_pdependence, rad_heating_forward, initial_steadystate, dudx_ambient
 import matplotlib.pyplot as plt
 
-name = 'Tachinami_buffered'
+name = 'Tachinami_buffered2'
 
 # initialise planetary interior with constant density, alpha, etc
 pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
