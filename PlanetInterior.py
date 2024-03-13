@@ -32,6 +32,7 @@ def g_profile(n, radius, density):
 
 
 def adiabatic_lapse_rate(T, x, alpha, cp, gravity):
+    # todo: does this need to be multiplied by dP/dz?
     return -alpha / cp * gravity * T
 
 

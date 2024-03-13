@@ -14,7 +14,29 @@ years2sec = 3.154e7
 #################### boundary conditions #########################
 
 
-def initial(z, u1, u0):
+def initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, k, g, eta, H, dTdz_ad):
+    Nm = len(z)
+    T = [Tsurf] * Nm  # upper boundary condition T=0
+
+    # build steady-state T profile downwards
+    for ii in range(Nm - 1, 0, -1):
+        T2 = T[ii]
+        l2 = l[ii]
+
+        # from sympy solution
+        dTdz = [(alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k - 0.288675134594813 * np.sqrt(eta * (
+                    -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
+                            alpha * cp * g * l2 ** 4 * rho ** 2),
+                (alpha * cp * dTdz_ad * g * l2 ** 4 * rho ** 2 - 0.5 * eta * k + 0.288675134594813 * np.sqrt(eta * (
+                            -4.0 * H * alpha * cp * g * l2 ** 4 * rho ** 2 * z - 12.0 * alpha * cp * dTdz_ad * g * k * l2 ** 4 * rho ** 2 + 3.0 * eta * k ** 2))) / (
+                            alpha * cp * g * l2 ** 4 * rho ** 2)]
+
+        # for now assume 1st solution is the -ve one and the other is +ve
+        T[ii - 1] = T2 - dTdz[0] * dz
+    return T
+
+
+def initial_linear(z, u1, u0):
     # initial linear u profile where u0: bottom temperature and u1: top temperature
     return (u1 - u0) * z + u0
 
@@ -105,11 +127,11 @@ def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
     H0 = c0 * hn * np.exp(4500 * np.log(2) / tau)  # initial heating based on (scaled) BSE concentrations
 
     H = np.sum(H0 * np.exp((-t_Myr) * np.log(2) / tau))
-    return H * rho
+    return H * rho  # W m-3
 
 
 def internal_heating_constant(t, x, H0=1e-12, **kwargs):
-    return H0  # W kg-1, for testing
+    return H0  # W m-3
 
 
 ######################## solve ode in t ###########################
@@ -410,7 +432,7 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
     pressures = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N, alpha=[alpha] * N,
                            cp=[cp] * N, psurf=1, Tp=1700)  # Pa
 
-    U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
+    U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
 
     ivp_args2 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, viscosity_constant,
                  internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l,
@@ -503,11 +525,11 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
     # boundary conditions
     Tsurf = 300
     Tcmb0 = 2850
-    U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
+    U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     # g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
-    g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
+    g_kwargs_decay = {'rho': rho, 't_buffer_Gyr': t_buffer_Myr * 1e-3}
     # eta_kwargs_Arr = {'eta_ref': 1e21, 'T_ref': 1600, 'Ea': 300e3}  # no pressure-dependence, with ref. viscosity
     eta_kwargs_Arr = {}  # Tachninami
 
@@ -666,7 +688,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
     lp, dldx = get_mixing_length_and_gradient_smooth(zp, alpha_mlt, beta_mlt)
     l = lp * L
 
-    U_0 = initial(zp, Tsurf, Tcmb0)  # initial temperature
+    U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     # g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function

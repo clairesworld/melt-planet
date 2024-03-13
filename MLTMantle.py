@@ -309,7 +309,7 @@ class MLTMantle:
     def solve(self, t0_Gyr, tf_Gyr, t0_buffer_Gyr=0, Nt_min=1000,
               viscosity_law=None,
               internal_heating_function=None,
-              radiogenic_conentration_factor=1,
+              # radiogenic_conentration_factor=1,
               mixing_length_kwargs=None,
               viscosity_kwargs=None,
               internal_heating_kwargs=None,
@@ -353,8 +353,45 @@ class MLTMantle:
         lp, dldx = get_mixing_length_and_gradient_smooth(zp, **mixing_length_kwargs)
         l = lp * self.d  # dimensionalise
 
-        U_0 = hts.initial(zp, Tsurf, Tcmb0)  # initial temperature
+        # todo neater way for this:
+        internal_heating_kwargs.update({'rho': rho})  # ensure density is in internal heating to get W/m3
 
+        # initial temperature profile
+        U_0 = hts.initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
+        # U_0 = hts.initial_steadystate(z, dz, Tsurf, l, rho, alpha, cp, kc, gravity, eta, H, dTdz_ad)
+
+        if t0_buffer_Gyr > 0:
+            # run for long enough to reach a steady state at constant H
+            print('running to', t0_buffer_Gyr,' Gyr to approximate steady state initial condition')
+            # args for heating_rate_function in HeatTransferSolver
+            # needs to match signature to heating_rate_function
+            # in this case assume constant heating
+
+            H0 = internal_heating_function(t=0, x=zp, **internal_heating_kwargs)  # get initial heating rate
+            print('H0 =', H0, 'W/kg')
+            internal_heating_kwargs_initial = {'H0': H0}
+            ivp_args = (
+                dx, zp, get_mixing_length_and_gradient_smooth, hts.dudx_ambient, viscosity_law,
+                hts.internal_heating_constant, kc, alpha, rho, cp, gravity, L,
+                mixing_length_kwargs, viscosity_kwargs, internal_heating_kwargs_initial, l,
+                pressures)
+
+            t0, tf = 0, t0_buffer_Gyr * 1e9 * years2sec  # seconds
+
+            max_step = hts.get_max_step(t0, tf, max_step, Nt_min, verbose)
+            soln = hts.solve_pde(t0, tf, U_0, hts.calc_total_heating_rate_numeric, ivp_args,
+                                 verbose=verbose, show_progress=True, max_step=max_step, writefile=False)
+            U_0 = soln.y[:, -1]
+
+            # # find roots
+            # from scipy import optimize
+            # init = optimize.root(fun, U_0, jac=None, method='hybr')
+
+        else:
+            # solve from initial U_0
+            U_0 = U_0
+
+        # now the real run
         # args for heating_rate_function in HeatTransferSolver
         # needs to match signature to heating_rate_function
         ivp_args = (
@@ -363,17 +400,7 @@ class MLTMantle:
             mixing_length_kwargs, viscosity_kwargs, internal_heating_kwargs, l,
             pressures)
 
-        if t0_buffer_Gyr is not None:
-            # run for long enough to reach a steady state at constant H
-            max_step = hts.get_max_step(t0, tf, max_step, Nt_min, verbose)
-            soln = hts.solve_pde(t0, tf, U_0, hts.calc_total_heating_rate_numeric, ivp_args,
-                                 verbose=verbose, show_progress=True, max_step=max_step, writefile=False)
-
-        else:
-            # solve from initial U_0
-            U_0 = U_0
-
-        t0, tf = t0_buffer_Gyr * 1e9 * years2sec, tf_Gyr * 1e9 * years2sec  # seconds
+        t0, tf = t0_Gyr * 1e9 * years2sec, tf_Gyr * 1e9 * years2sec  # seconds
 
         soln = hts.solve_pde(t0, tf, U_0, hts.calc_total_heating_rate_numeric, ivp_args,
                              verbose=verbose, show_progress=True, max_step=max_step, writefile=writefile)
