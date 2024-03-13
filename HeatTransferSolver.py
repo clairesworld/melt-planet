@@ -165,7 +165,7 @@ def internal_heating_constant(t, x, H0=1e-12, **kwargs):
 
 
 def solve_pde(t0, tf, U_0, heating_rate_function, ivp_args, max_step=1e6 * years2sec,
-              verbose=False, show_progress=False, writefile=None):
+              verbose=False, show_progress=False, writefile=None, **kwargs):
     """
     :param writefile:
     :type writefile:
@@ -215,8 +215,8 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_args, max_step=1e6 * years
                      vectorized=False,
                      args=ivp_args,
                      max_step=max_step,
-                     jac=None  # recommended for BDF, todo
-                     )
+                     jac=None,  # recommended for BDF, todo
+                     **kwargs)
     end = time.time()
 
     if writefile is not None:

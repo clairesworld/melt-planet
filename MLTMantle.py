@@ -380,7 +380,8 @@ class MLTMantle:
 
             max_step = hts.get_max_step(t0, tf, max_step, Nt_min, verbose)
             soln = hts.solve_pde(t0, tf, U_0, hts.calc_total_heating_rate_numeric, ivp_args,
-                                 verbose=verbose, show_progress=True, max_step=max_step, writefile=False)
+                                 verbose=verbose, show_progress=True, max_step=max_step, writefile=False,
+                                 first_step=100,)
             U_0 = soln.y[:, -1]
 
         else:
