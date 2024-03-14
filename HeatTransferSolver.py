@@ -255,7 +255,6 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
                                     tspan, show_progress):
     """ function to calculate dT/dt for each z (evaluated at array of temperatures u)
     this can be sped up by ~2 if mixing length is time-independent"""
-    print('t', t, 'seconds')
 
     if show_progress:
         print("\rModel time: " + str(format(t / years2sec, ".0f")) + " yr, " + str(
