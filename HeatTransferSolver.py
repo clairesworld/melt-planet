@@ -662,11 +662,10 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
 
 
 def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=True, writefile=None, plot=True,
-                     figpath=None, Mantle=None):
+                     figpath=None, Mantle=None, cmap='magma'):
     """ test generic case """
     from MLTMantle import (get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure)
     # from MLTMantleCalibrated import get_mixing_length_calibration
-    import matplotlib.pyplot as plt
     from PlanetInterior import pt_profile
 
     # dimensionless convective parameters
@@ -741,7 +740,8 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
     lp, dldx = get_mixing_length_and_gradient_smooth(zp, alpha_mlt, beta_mlt)
     l = lp * L
 
-    U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
+    # U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
+    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     # g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
@@ -785,37 +785,163 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
     #                  verbose=verbose, show_progress=True, max_step=max_step, writefile=writefile)
 
     if plot:
-        # plot
-        fig, ax = plt.subplots(1, 3)
+        import matplotlib.pyplot as plt
+        import matplotlib.colors as mcolors
+        import matplotlib.cm as cmx
 
-        n = -1
-        ax[0].plot(zp, soln.y[:, n], label='Arrhenius')
-        # plt.plot(zp, soln2.y[:, n], label='exponential')
-        ax[0].set_xlabel('z/L')
-        ax[0].set_ylabel('T (K)')
-        ax[0].set_title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
-        ax[0].legend()
+        # colourise
+        cm = plt.get_cmap(cmap)
+        cNorm = mcolors.Normalize(vmin=soln.t[0], vmax=soln.t[-1])
+        scalarmap = cmx.ScalarMappable(norm=cNorm, cmap=cm)
+        c = scalarmap.to_rgba(soln.t)
 
-        # i = N - 1
-        # plt.figure()
-        # plt.plot(soln.t / years2sec * 1e-6, soln.y[i, :])
-        # plt.xlabel('time (Myr)')
-        # plt.ylabel('Surface temperature (K)')
+        # temperature evolution
+        fig = plt.figure()
+        for n in np.arange(len(soln.t))[::100]:
+            plt.plot(zp, soln.y[:, int(n)], c=c[n])
+        plt.xlabel('z/L')
+        plt.ylabel('T (K)')
+        plt.colorbar(
+            plt.gca().scatter(soln.t / years2sec * 1e-6, soln.t / years2sec * 1e-6, c=soln.t / years2sec * 1e-6,
+                              cmap='magma', s=0), label='time (Myr)')
 
-        n = 0  # initial
-        ax[1].plot(zp, np.log10(Arrhenius_viscosity_law_pressure(soln.y[:, n], zp, **eta_kwargs)), label='Arrhenius')
-        # ax[1].plot(zp, np.log10(
-        #     exponential_viscosity_law(soln2.y[:, n], zp, **eta_kwargs2)), label='exponential')
-        ax[1].set_xlabel('z/L')
-        ax[1].set_ylabel(r'log$\eta$')
-        ax[1].set_title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
+        plt.tight_layout()
+        if figpath is not None:
+            fig.savefig(figpath, bbox_inches='tight')
+        else:
+            plt.show()
 
-        # internal heating
-        ax[2].plot(soln.t / (years2sec * 1e9), [rad_heating_forward(tt, x=None, **g_kwargs_decay) for tt in soln.t],
-                   label='Radiogenic heating')
-        ax[2].set_xlabel('t (Gyr)')
-        ax[2].set_ylabel('H (W/m3)')
-        ax[2].legend()
+
+def solve_hot_initial(N=1000, Nt_min=1000, t_buffer_Gyr=4.5, verbose=True, writefile=None, plot=True,
+                     figpath=None, Mantle=None, cmap='magma'):
+    """ test generic case """
+    from MLTMantle import (get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure)
+    from PlanetInterior import pt_profile
+
+    # dimensionless convective parameters
+    # RaH = 1e7
+    # dEta = 1e5
+    # mixing length calibration (stagnant lid mixed heated)
+    # alpha_mlt = 0.2895
+    # beta_mlt = 0.6794
+    # alpha_mlt, beta_mlt = get_mixing_length_calibration(RaH, dEta)
+    # if verbose:
+    #     print('alpha_mlt', alpha_mlt, 'beta_mlt', beta_mlt)
+
+    if Mantle is None:
+        # set up grid/domain
+        Rc, Rp = 3475e3, 6370e3
+        zp = np.linspace(0, 1, N)  # dimensionless height
+
+        # thermodynamic parameters
+        cp = 1190  # J/kg/K
+        alpha = 3e-5
+        gravity = 10
+        kc = 5
+        rho = 4500  # kg/m3
+        kappa = kc / (rho * cp)
+
+        # boundary conditions
+        Tsurf = 300
+        Tcmb0 = 3000  # only used for initial condition, bc is constant flux
+
+        # constant pressure structure - evaluate at some Tp but should be roughly independent of Tp
+        pressures, Tp = pt_profile(N, radius=zp * (Rp - Rc) + Rc, density=[rho] * N, gravity=[gravity] * N,
+                                   alpha=[alpha] * N, cp=[cp] * N, psurf=1, Tp=1700)  # Pa
+
+    else:
+        # set up grid/domain
+        N = Mantle.Nm
+        Rp, Rc = Mantle.r[-1], Mantle.r[0]
+        zp = Mantle.zp
+
+        # thermodynamic paramters
+        cp = Mantle.cp_m
+        alpha = Mantle.alpha_m
+        gravity = Mantle.g_m
+        kc = Mantle.k_m
+        rho = Mantle.rho_m
+        kappa = Mantle.kappa_m
+
+        # boundary conditions
+        Tsurf = Mantle.Tsurf
+        Tcmb0 = Mantle.Tcmb0  # only used for initial condition, bc is constant flux
+
+        # pressure profile
+        pressures = Mantle.P
+        Tp = Mantle.T_adiabat
+
+    L = Rp - Rc  # length scale
+    D = 1  # dimensionless length scale
+    dx = (zp[1] - zp[0]) * L
+    t0, tf = 0, t_buffer_Gyr * 1e9 * years2sec  # seconds
+
+    try:
+        max_step = (tf - t0) / Nt_min
+        if verbose:
+            print('max step:', max_step / years2sec, 'years')
+    except ZeroDivisionError:
+        max_step = np.inf
+        if verbose:
+            print('max step: inf')
+
+    # MLT constants
+    alpha_mlt, beta_mlt = 0.82, 1  # Tachinami 2011
+    lp, dldx = get_mixing_length_and_gradient_smooth(zp, alpha_mlt, beta_mlt)
+    l = lp * L
+
+    U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
+    # U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
+
+    l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
+    # g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
+    g_kwargs_decay = {'rho': rho}
+    # eta_kwargs_Arr = {'eta_ref': 1e21, 'T_ref': 1600, 'Ea': 300e3}  # no pressure-dependence, with ref. viscosity
+    eta_kwargs = {}  # Tackley - kwargs hardcoded into function for the time being
+
+    H0 = rad_heating_forward(t=0, x=zp, **g_kwargs_decay)  # get initial heating rate
+    g_kwargs_constant = {'H0': H0}
+    print('H0 =', H0, 'W/kg')
+
+    ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, Arrhenius_viscosity_law_pressure,
+                internal_heating_constant, kc, alpha, rho, cp, gravity, L,
+                l_kwargs, eta_kwargs, g_kwargs_constant, l,
+                pressures)  # needs to match signature to heating_rate_function
+    soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args,
+                     verbose=True, show_progress=True, max_step=max_step, writefile=writefile)
+
+    # eta_kwargs2 = {'Tsurf': Tsurf, 'Tcmb': Tcmb0, 'dEta': dEta, 'eta_b': eta_b}
+    # ivp_args2 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, exponential_viscosity_law,
+    #              internal_heating_constant, kc, alpha, rho, cp, gravity, L,
+    #              l_kwargs, eta_kwargs2, g_kwargs, l)  # needs to match signature to heating_rate_function
+    # soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args2, verbose=True, writefile=writefile)
+    #
+    # ivp_args3 = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient_constants, Arrhenius_viscosity_law,
+    #             internal_heating_constant, kc, alpha, rho, cp, gravity, L,
+    #             l_kwargs, eta_kwargs_Arr, g_kwargs_constant, l)  # needs to match signature to heating_rate_function
+    # soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args3,
+    #                  verbose=verbose, show_progress=True, max_step=max_step, writefile=writefile)
+
+    if plot:
+        import matplotlib.pyplot as plt
+        import matplotlib.colors as mcolors
+        import matplotlib.cm as cmx
+
+        # colourise
+        cm = plt.get_cmap(cmap)
+        cNorm = mcolors.Normalize(vmin=soln.t[0], vmax=soln.t[-1])
+        scalarmap = cmx.ScalarMappable(norm=cNorm, cmap=cm)
+        c = scalarmap.to_rgba(soln.t)
+
+        # temperature evolution
+        fig = plt.figure()
+        for n in np.arange(len(soln.t))[::100]:
+            plt.plot(zp, soln.y[:, int(n)], c=c[n])
+        plt.xlabel('z/L')
+        plt.ylabel('T (K)')
+        plt.colorbar(
+            plt.gca().scatter(soln.t / years2sec * 1e-6, soln.t / years2sec * 1e-6, c=soln.t / years2sec * 1e-6,
+                              cmap='magma', s=0), label='time (Myr)')
 
         plt.tight_layout()
         if figpath is not None:
