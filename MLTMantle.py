@@ -477,3 +477,21 @@ def read_h5py(fin, outputpath, verbose=True):
 
     # return dictionary
     return d
+
+
+def save_h5py_solution(fout, soln, meta_dict):
+    import h5py
+
+    # turn functions into strings for readable metadata
+    for k in meta_dict.keys():
+        if callable(k):
+            meta_dict[k] = eval(meta_dict[k] + '.__name__')
+
+    with h5py.File(fout, "w") as hf:
+        hf.create_dataset('temperature', data=soln.y, dtype=soln.y.dtype)
+        hf.create_dataset('time', data=soln.t, dtype=soln.t.dtype)
+        # hf.create_dataset('z', data=np.linspace(0, 1, len(soln.y)), dtype=np.float64)
+
+        # store planet dictionary attrs as hdf5 metadata
+        hf.attrs.update(meta_dict)
+        # to print metadata: print(hf1.attrs.keys())
