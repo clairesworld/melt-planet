@@ -3,6 +3,8 @@ import numpy as np
 from math import sqrt, log10, log
 import PlanetInterior
 
+# /network/group/aopp/planetary/RTP037_GUIMOND_MANTMELT
+
 years2sec = 3.154e7
 
 # define default dimensional attributes and which are expected to be in 1D

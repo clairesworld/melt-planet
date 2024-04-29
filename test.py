@@ -4,8 +4,10 @@ from HeatTransferSolver import test_arrhenius_radheating, test_pdependence, rad_
     dudx_ambient, solve_hot_initial
 import matplotlib.pyplot as plt
 
+#/network/group/aopp/planetary/RTP037_GUIMOND_MANTMELT
+
 name = 'Tachinami_buffered2'
-mixing_length_kwargs = {'alpha_mlt': 0.82, 'beta_mlt': 1}
+# mixing_length_kwargs = {'alpha_mlt': 0.82, 'beta_mlt': 1}
 
 """ iniitialise """
 # initialise planetary interior with constant density, alpha, etc
@@ -14,7 +16,7 @@ pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
 # pl.initialise_constant(n=50000, rho=4500, cp=1190, alpha=3e-5)
 # pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
 # pl.save(output_path='output/tests/')
-pl.plot_structure_p()
+# pl.plot_structure_p()
 
 # generate mantle object
 man = mlt.MLTMantle(pl, Nm=10000, verbose=False)
