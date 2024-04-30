@@ -437,8 +437,8 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
 
     if save_progress:
         state = {'t': t, 'u': u, 'q': q, 'g': source_term, 'eta': eta}
-        with open(save_progress, "wb") as pfile:
-            pkl.dump(state, pfile + str(int(t)))
+        with open(save_progress + str(int(t)), "wb") as pfile:
+            pkl.dump(state, pfile)
 
     return dudt
 
