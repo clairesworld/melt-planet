@@ -481,19 +481,40 @@ def read_h5py(fin, outputpath, verbose=True):
     return d
 
 
-def save_h5py_solution(fout, soln, meta_dict):
+def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
     import h5py
+    from HeatTransferSolver import calc_thermal_state
 
-    # turn functions into strings for readable metadata
-    for k in meta_dict.keys():
-        if callable(k):
-            meta_dict[k] = eval(meta_dict[k] + '.__name__')
+    # full thermal state of solution
+    q, g, eta = calc_thermal_state(soln.t, soln.y, **ivp_kwargs)
 
     with h5py.File(fout, "w") as hf:
-        hf.create_dataset('temperature', data=soln.y, dtype=soln.y.dtype)
         hf.create_dataset('time', data=soln.t, dtype=soln.t.dtype)
-        # hf.create_dataset('z', data=np.linspace(0, 1, len(soln.y)), dtype=np.float64)
+        hf.create_dataset('temperature', data=soln.y, dtype=soln.y.dtype)
+        hf.create_dataset('heat_flux', data=q, dtype=q.dtype)
+        hf.create_dataset('internal_heating_rate', data=g, dtype=g.dtype)
+        hf.create_dataset('viscosity', data=eta, dtype=eta.dtype)
 
-        # store planet dictionary attrs as hdf5 metadata
-        hf.attrs.update(meta_dict)
-        # to print metadata: print(hf1.attrs.keys())
+        # # viscosity
+        # eta = ivp_kwargs['eta_function'](soln.y, ivp_kwargs['pressures'], **ivp_kwargs['eta__kwargs'])
+        # hf.create_dataset('viscosity', data=eta, dtype=eta.dtype)
+        #
+        # # internal heating
+        # g = ivp_kwargs['g_function'](soln.t, ivp_kwargs['zp'], **ivp_kwargs['g_kwargs'])
+        # hf.create_dataset('internal_heating', data=g, dtype=g.dtype)
+        #
+        # # surface heat flow
+        # q_sfc =
+
+        # add all other ivp args
+        for k, v in ivp_kwargs.items():
+            # turn functions into strings
+            if callable(k):
+                hf.create_dataset(k, data=eval(v + '.__name__'))
+            else:
+                hf.create_dataset(k, data=v, dtype=v.dtype)
+
+        if meta_dict:
+            # store planet dictionary attrs as hdf5 metadata
+            hf.attrs.update(meta_dict)
+            # to print metadata: print(hf1.attrs.keys())

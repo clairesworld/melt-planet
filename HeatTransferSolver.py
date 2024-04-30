@@ -357,7 +357,7 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_kwargs, max_step=1e6 * yea
 
     print('\n')
     if verbose:
-        print(len(soln.t), 'timesteps in', end - start, 'seconds', '(' + heating_rate_function.__name__ + ')')
+        print(len(soln.t), 'timesteps in', (end - start)/60, 'minutes', '(' + heating_rate_function.__name__ + ')')
         print('    u', np.shape(soln.y), ', t', np.shape(soln.t))
     return soln
 
@@ -365,22 +365,9 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_kwargs, max_step=1e6 * yea
 ################### different methods to calculate total heating rate on RHS ###########################
 
 
-def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function, g_function, kc,
-                                    alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures,
-                                    tspan, show_progress, save_progress):
-    """ function to calculate dT/dt for each z (evaluated at array of temperatures u)
-    this can be sped up by ~2 if mixing length is time-independent"""
-    percent_complete = (((t - tspan[0]) / (tspan[1] - tspan[0])) * 100)
-
-    if show_progress:
-        print("\rModel time: " + str(format(t / years2sec, ".0f")) + " yr, " + str(
-            format(percent_complete, ".4f")) + "% complete",
-              end='', flush=True)
-
-    if save_progress:
-        with open(save_progress, "wb") as pfile:
-            pkl.dump((t, u), pfile)
-
+def calc_thermal_state(t=None, u=None, dx=None, xprime=None, l_function=None, dudx_ambient_function=None,
+                       eta_function=None, g_function=None, kc=None, alpha=None, rho=None, cp=None, gravity=None, L=None,
+                       l_kwargs=None, eta_kwargs=None, g_kwargs=None, l=None, pressures=None):
     # update viscosity
     eta = eta_function(u, pressures, **eta_kwargs)
 
@@ -399,10 +386,30 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     kv = convective_coefficient(alpha, rho, cp, gravity, l, eta, dudx_adiabat, dudx)
 
     source_term = g_function(t, xprime, **g_kwargs)
-    # print('internal heating', source_term, 'W/m3' )
+
+    # heat flux
+    q = total_heat_transport(kc, kv, dudx, dudx_adiabat)
+
+    return q, source_term, eta
+
+
+def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function, g_function, kc,
+                                    alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures,
+                                    tspan, show_progress, save_progress):
+    """ function to calculate dT/dt for each z (evaluated at array of temperatures u)
+    this can be sped up by ~2 if mixing length is time-independent"""
+    percent_complete = (((t - tspan[0]) / (tspan[1] - tspan[0])) * 100)
+
+    if show_progress:
+        print("\rModel time: " + str(format(t / years2sec, ".0f")) + " yr, " + str(
+            format(percent_complete, ".4f")) + "% complete",
+              end='', flush=True)
+
+    # get thermal state
+    q, source_term, eta = calc_thermal_state(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function, g_function, kc,
+                                    alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures)
 
     # calculate divergence of flux
-    q = total_heat_transport(kc, kv, dudx, dudx_adiabat)
     divq = np.gradient(q, dx)
 
     lhs = -divq + source_term
@@ -427,6 +434,11 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     # print('H', source_term)
     # print('diff term', diff_term)
     # print('adv term', adv_term)
+
+    if save_progress:
+        state = {'t': t, 'u': u, 'q': q, 'g': source_term, 'eta': eta}
+        with open(save_progress, "wb") as pfile:
+            pkl.dump(state, pfile + str(int(t)))
 
     return dudt
 
@@ -631,15 +643,15 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
 
     if plot:
         # plot
-        n = len(soln2.t) - 1
+        n = len(soln.t) - 1
         plt.figure()
         # plt.plot(zp, soln.y[:, n], label='analytic')
         # plt.plot(zp, soln1.y[:, n], label='numeric Arrhenius')
-        plt.plot(zp, soln2.y[:, n], label='numeric isoviscous')
+        plt.plot(zp, soln.y[:, n], label='numeric isoviscous')
         # plt.plot(zt, Tsol, label='pyrolite solidus')
         plt.xlabel('z/L')
         plt.ylabel('T (K)')
-        plt.title('t={:.3f} Myr'.format(soln2.t[n] / years2sec * 1e-6))
+        plt.title('t={:.3f} Myr'.format(soln.t[n] / years2sec * 1e-6))
         plt.legend()
         # i = N - 1
         # plt.figure()
