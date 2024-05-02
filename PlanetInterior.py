@@ -366,3 +366,7 @@ class PlanetInterior:
         with open(output_path + self.name + '_struct.pkl', "wb") as pfile:
             pkl.dump(self, pfile)
 
+
+def find_lower_mantle(pressures):
+    return (np.abs(pressures - P_pv_in)).argmin()
+

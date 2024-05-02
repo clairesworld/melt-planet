@@ -1,12 +1,12 @@
 import PlanetInterior as planet
 import MLTMantle as mlt
 from HeatTransferSolver import test_arrhenius_radheating, test_pdependence, rad_heating_forward, initial_steadystate, \
-    dudx_ambient, solve_hot_initial
+    dudx_ambient, solve_hot_initial, test_Tachinami
 import matplotlib.pyplot as plt
 
 #/network/group/aopp/planetary/RTP037_GUIMOND_MANTMELT
 
-name = 'Tachinami_buffered2'
+
 # mixing_length_kwargs = {'alpha_mlt': 0.82, 'beta_mlt': 1}
 
 """ iniitialise """
@@ -19,8 +19,8 @@ pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
 # pl.plot_structure_p()
 
 # generate mantle object
-man = mlt.MLTMantle(pl, Nm=10000, verbose=False)
-# set fixed T boundary conditions/initial condition
+man = mlt.MLTMantle(pl, Nm=10000, verbose=True)
+# set fixed T boundary conditions/initial condition - may be overwritten by initial temperature profile
 man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
 
 """ test with full class """
@@ -39,12 +39,19 @@ man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
 # solve_hot_initial(N=10000, Nt_min=1000, t_buffer_Gyr=4, verbose=True, writefile='output/tests/hot.h5py', plot=True,
 #                   figpath='figs_scratch/hot.pdf', Mantle=None, cmap='magma')
 
-""" tests """
-# # test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=3000, age_Gyr=4.5,
-# #                           writefile='output/tests/radheating_fixedflux.h5py', plot=True,
-# #                           figpath='figs_scratch/radheating_fixedflux.pdf')
-#
-test_pdependence(Nt_min=1000, t_buffer_Myr=0, age_Gyr=5, Mantle=man,
+""" test different rad heating, viscosity parameterisations etc """
+# test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=3000, age_Gyr=4.5,
+#                           writefile='output/tests/radheating_fixedflux.h5py', plot=True,
+#                           figpath='figs_scratch/radheating_fixedflux.pdf')
+
+# name = 'Tachinami_buffered2'
+# test_pdependence(Nt_min=1000, t_buffer_Myr=0, age_Gyr=5, Mantle=man,
+#                  writefile='output/tests/' + name + '.h5py', plot=False,
+#                  save_progress= 'output/tests/tmp/' + name + '.pkl',
+#                  figpath='figs_scratch/' + name + '.pdf')
+
+name = 'Tachinami_full'
+test_Tachinami(Nt_min=1000, t_buffer_Myr=0,
                  writefile='output/tests/' + name + '.h5py', plot=False,
                  save_progress= 'output/tests/tmp/' + name + '.pkl',
                  figpath='figs_scratch/' + name + '.pdf')

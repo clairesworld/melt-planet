@@ -18,10 +18,11 @@ years2sec = 3.154e7
 def initial_file(fin, outputpath="/home/claire/Works/melt-planet/output/tests/"):
     from MLTMantle import read_h5py
     soln = read_h5py(fin, outputpath, verbose=True)
-    return soln['temperature'][:,-1]
+    return soln['temperature'][:, -1]
 
 
-def initial_steadystate(z, Tsurf, Tcmb0, alpha, cp, g, l, rho, kc, pressures, g_function, g_kwargs, eta_function, eta_kwargs,
+def initial_steadystate(z, Tsurf, Tcmb0, alpha, cp, g, l, rho, kc, pressures, g_function, g_kwargs, eta_function,
+                        eta_kwargs,
                         dudx_ambient_function, tol=1e-4):
     # iterative method
     N = len(z)
@@ -46,11 +47,17 @@ def initial_steadystate(z, Tsurf, Tcmb0, alpha, cp, g, l, rho, kc, pressures, g_
             Hi = H[i]
             zi = z[i]
 
-            T2 = T[i+1]
+            T2 = T[i + 1]
             etai = eta_function(T2, pressures[i], **eta_kwargs)
             dTdz_adi = dudx_ambient_function(T2, None, alphai, cpi, gi)
 
-            dudz = [(2*alphai*cpi*dTdz_adi*gi*li**4*rhoi**2 - etai*kci - np.sqrt(etai*(-4*Hi*alphai*cpi*gi*li**4*rhoi**2*zi - 4*alphai*cpi*dTdz_adi*gi*kci*li**4*rhoi**2 + etai*kci**2)))/(2*alphai*cpi*gi*li**4*rhoi**2), (2*alphai*cpi*dTdz_adi*gi*li**4*rhoi**2 - etai*kci + np.sqrt(etai*(-4*Hi*alphai*cpi*gi*li**4*rhoi**2*zi - 4*alphai*cpi*dTdz_adi*gi*kci*li**4*rhoi**2 + etai*kci**2)))/(2*alphai*cpi*gi*li**4*rhoi**2)]
+            dudz = [(2 * alphai * cpi * dTdz_adi * gi * li ** 4 * rhoi ** 2 - etai * kci - np.sqrt(etai * (
+                        -4 * Hi * alphai * cpi * gi * li ** 4 * rhoi ** 2 * zi - 4 * alphai * cpi * dTdz_adi * gi * kci * li ** 4 * rhoi ** 2 + etai * kci ** 2))) / (
+                                2 * alphai * cpi * gi * li ** 4 * rhoi ** 2), (
+                                2 * alphai * cpi * dTdz_adi * gi * li ** 4 * rhoi ** 2 - etai * kci + np.sqrt(etai * (
+                                    -4 * Hi * alphai * cpi * gi * li ** 4 * rhoi ** 2 * zi - 4 * alphai * cpi * dTdz_adi * gi * kci * li ** 4 * rhoi ** 2 + etai * kci ** 2))) / (
+                                2 * alphai * cpi * gi * li ** 4 * rhoi ** 2)]
+
 
 # def initial_ss():
 #     def fun(x, ):
@@ -339,7 +346,7 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_kwargs, max_step=1e6 * yea
     ivp_args = ivp_args + (tspan, show_progress, save_progress)
 
     if verbose:
-        print('Solving IVP from', tspan[0] /years2sec * 1e-9, 'to', tspan[1] / years2sec * 1e-9, 'Gyr')
+        print('Solving IVP from', tspan[0] / years2sec * 1e-9, 'to', tspan[1] / years2sec * 1e-9, 'Gyr')
 
     start = time.time()
     soln = solve_ivp(heating_rate_function,
@@ -357,7 +364,7 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_kwargs, max_step=1e6 * yea
 
     print('\n')
     if verbose:
-        print(len(soln.t), 'timesteps in', (end - start)/60, 'minutes', '(' + heating_rate_function.__name__ + ')')
+        print(len(soln.t), 'timesteps in', (end - start) / 60, 'minutes', '(' + heating_rate_function.__name__ + ')')
         print('    u', np.shape(soln.y), ', t', np.shape(soln.t))
     return soln
 
@@ -406,8 +413,9 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
               end='', flush=True)
 
     # get thermal state
-    q, source_term, eta = calc_thermal_state(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function, g_function, kc,
-                                    alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures)
+    q, source_term, eta = calc_thermal_state(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function,
+                                             g_function, kc,
+                                             alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures)
 
     # calculate divergence of flux
     divq = np.gradient(q, dx)
@@ -618,22 +626,21 @@ def test_isoviscous(N=500, Nt_min=0, writefile=None, verbose=True, plot=True):
     U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
 
     ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, viscosity_constant,
-                 internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l,
-                 pressures)
+                internal_heating_constant, kc, alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l,
+                pressures)
 
     ivp_kwargs = {'dx': dx, 'zp': zp, 'get_mixing_length_and_gradient_smooth': get_mixing_length_and_gradient_smooth,
-                  'dudx_ambient':dudx_ambient, 'viscosity_constant': viscosity_constant,
-                'internal_heating_constant': internal_heating_constant, 'kc': kc, 'alpha': alpha,
+                  'dudx_ambient': dudx_ambient, 'viscosity_constant': viscosity_constant,
+                  'internal_heating_constant': internal_heating_constant, 'kc': kc, 'alpha': alpha,
                   'rho': rho, 'cp': cp, 'gravity': gravity, 'L': L,
-                'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs, 'g_kwargs': g_kwargs, 'l': l,
-                'pressures': pressures}  # needs to match signature to heating_rate_function}
+                  'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs, 'g_kwargs': g_kwargs, 'l': l,
+                  'pressures': pressures}  # needs to match signature to heating_rate_function}
 
     soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args, verbose=verbose, show_progress=True,
-                      max_step=max_step)
+                     max_step=max_step)
 
     if writefile:
         save_h5py_solution(writefile, soln, ivp_kwargs)
-
 
     # pl = planet.PlanetInterior()
     # pl.initialise_constant(n=5000, rho=4500, cp=1190, alpha=3e-5)
@@ -746,18 +753,17 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
                 pressures)  # needs to match signature to heating_rate_function
 
     ivp_kwargs = {'dx': dx, 'zp': zp, 'get_mixing_length_and_gradient_smooth': get_mixing_length_and_gradient_smooth,
-                  'dudx_ambient':dudx_ambient, 'eta_function': Arrhenius_viscosity_law,
-                'g_function': rad_heating_forward, 'kc': kc, 'alpha': alpha,
+                  'dudx_ambient': dudx_ambient, 'eta_function': Arrhenius_viscosity_law,
+                  'g_function': rad_heating_forward, 'kc': kc, 'alpha': alpha,
                   'rho': rho, 'cp': cp, 'gravity': gravity, 'L': L,
-                'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs_Arr, 'g_kwargs': g_kwargs_decay, 'l': l,
-                'pressures': pressures}  # needs to match signature to heating_rate_function}
+                  'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs_Arr, 'g_kwargs': g_kwargs_decay, 'l': l,
+                  'pressures': pressures}  # needs to match signature to heating_rate_function}
 
     soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_args,
                      verbose=True, show_progress=True, max_step=max_step)
 
     if writefile:
         save_h5py_solution(writefile, soln, ivp_kwargs)
-
 
     if plot:
         # plot
@@ -801,7 +807,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
 
 def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=True, writefile=None, plot=True,
                      figpath=None, save_progress=None, Mantle=None, cmap='magma'):
-    """ test generic case """
+    """ test with p-dependent viscosity and thermal parameters (from Mantle object) """
     from MLTMantle import (get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure)
     # from MLTMantleCalibrated import get_mixing_length_calibration
     from PlanetInterior import pt_profile
@@ -884,7 +890,6 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
     U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
-    # g_kwargs_constant = {'rho': rho, 'H': H0}  # not relevant here but args passed to g_function
     g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
     eta_kwargs = {}  # Tackley - kwargs hardcoded into function for the time being
 
@@ -910,11 +915,145 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
                 pressures)  # needs to match signature to heating_rate_function
 
     ivp_kwargs = {'dx': dx, 'zp': zp, 'get_mixing_length_and_gradient_smooth': get_mixing_length_and_gradient_smooth,
-                  'dudx_ambient':dudx_ambient, 'eta_function': Arrhenius_viscosity_law_pressure,
-                'g_function': rad_heating_forward, 'kc': kc, 'alpha': alpha,
+                  'dudx_ambient': dudx_ambient, 'eta_function': Arrhenius_viscosity_law_pressure,
+                  'g_function': rad_heating_forward, 'kc': kc, 'alpha': alpha,
                   'rho': rho, 'cp': cp, 'gravity': gravity, 'L': L,
-                'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs, 'g_kwargs': g_kwargs_decay, 'l': l,
-                'pressures': pressures}  # needs to match signature to heating_rate_function}
+                  'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs, 'g_kwargs': g_kwargs_decay, 'l': l,
+                  'pressures': pressures}  # needs to match signature to heating_rate_function}
+
+    soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_kwargs,
+                     verbose=True, show_progress=True, max_step=max_step, save_progress=save_progress)
+
+    if writefile:
+        save_h5py_solution(writefile, soln, ivp_kwargs=ivp_kwargs)
+
+    if plot:
+        import matplotlib.pyplot as plt
+        import matplotlib.colors as mcolors
+        import matplotlib.cm as cmx
+
+        # colourise
+        cm = plt.get_cmap(cmap)
+        cNorm = mcolors.Normalize(vmin=soln.t[0], vmax=soln.t[-1])
+        scalarmap = cmx.ScalarMappable(norm=cNorm, cmap=cm)
+        c = scalarmap.to_rgba(soln.t)
+
+        # temperature evolution
+        fig = plt.figure()
+        for n in np.arange(len(soln.t))[::100]:
+            plt.plot(zp, soln.y[:, int(n)], c=c[n])
+        plt.xlabel('z/L')
+        plt.ylabel('T (K)')
+        plt.colorbar(
+            plt.gca().scatter(soln.t / years2sec * 1e-6, soln.t / years2sec * 1e-6, c=soln.t / years2sec * 1e-6,
+                              cmap='magma', s=0), label='time (Myr)')
+
+        plt.tight_layout()
+        if figpath is not None:
+            fig.savefig(figpath, bbox_inches='tight')
+        else:
+            plt.show()
+
+
+def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True, writefile=None, plot=True,
+                   figpath=None, save_progress=None, cmap='magma', **kwargs):
+    """ test generic case """
+    from MLTMantle import get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure, MLTMantle
+    from PlanetInterior import pt_profile
+    from MLTMantle import save_h5py_solution
+    import PlanetInterior as planet
+
+    pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
+    # pl = planet.PlanetInterior(name='Tachinami_full')
+    # pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
+    # pl.save(output_path='output/tests/')
+
+    # generate mantle object
+    Mantle = MLTMantle(pl, Nm=10000, verbose=True)
+
+    # set up grid/domain
+    N = Mantle.Nm
+    Rp, Rc = Mantle.r[-1], Mantle.r[0]
+    zp = Mantle.zp
+
+    # thermodynamic paramters
+    cp = Mantle.cp_m
+    alpha = Mantle.alpha_m
+    gravity = Mantle.g_m
+    kc = Mantle.k_m
+    rho = Mantle.rho_m
+    kappa = Mantle.kappa_m
+
+    # boundary conditions
+    Tsurf = Mantle.Tsurf
+    Tcmb0 = Mantle.Tcmb0  # only used for initial condition, bc is constant flux
+
+    # pressure profile
+    pressures = Mantle.P
+    Tp = Mantle.T_adiabat
+
+    L = Rp - Rc  # length scale
+    D = 1  # dimensionless length scale
+    dx = (zp[1] - zp[0]) * L
+    t0, tf = t_buffer_Myr * 1e6 * years2sec, age_Gyr * 1e9 * years2sec  # seconds
+
+    # lower mantle values
+    i_lm_top = planet.find_lower_mantle(pressures) #  lower mantle from idx = 0:i_lm_top
+    kc[0:i_lm_top + 1] = 10
+    alpha[0:i_lm_top + 1] = 2.4e-5
+    cp[0:i_lm_top + 1] = 1260
+
+    # upper mtl
+    cp[i_lm_top + 1:] = 1250
+    alpha[i_lm_top + 1:] = 3.6e-5
+
+    # viscosity params
+    B = np.zeros_like(pressures)
+    n = np.zeros_like(pressures)
+    E = np.zeros_like(pressures)
+    V = np.ones_like(pressures) * 10e-6
+    eps = np.ones_like(pressures) * 1e-15
+
+    B[0:i_lm_top + 1] = 3.5e-15
+    n[0:i_lm_top + 1] = 3.0
+    E[0:i_lm_top + 1] = 430e3
+
+    B[i_lm_top + 1:] = 7.4e-17
+    n[i_lm_top + 1:] = 3.5
+    E[i_lm_top + 1:] = 500e3
+
+    try:
+        max_step = (tf - t0) / Nt_min
+        if verbose:
+            print('max step:', max_step / years2sec, 'years')
+    except ZeroDivisionError:
+        max_step = np.inf
+        if verbose:
+            print('max step: inf')
+
+    # MLT constants
+    alpha_mlt, beta_mlt = 0.82, 1  # Tachinami 2011
+    lp, dldx = get_mixing_length_and_gradient_smooth(zp, alpha_mlt, beta_mlt)
+    l = lp * L
+
+    # initial T profile - from file
+    # U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
+    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
+
+    def eta_Ranalli(T, P, B, n, E, V, eps, R=8.314, **kwargs):
+        return 1/2 * ( 1/(B ** (1/n)) * np.exp((E + P * V) / (n * R * T)) ) * eps ** ((1-n) / n)
+
+
+    l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
+    g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
+    eta_kwargs = {'B': B, 'n': n, 'E': E, 'V': V, 'eps': eps}
+
+    ivp_kwargs = {'dx': dx, 'zp': zp, 'get_mixing_length_and_gradient_smooth': get_mixing_length_and_gradient_smooth,
+                  'dudx_ambient': dudx_ambient, 'eta_function': eta_Ranalli,
+                  'g_function': rad_heating_forward, 'kc': kc, 'alpha': alpha,
+                  'rho': rho, 'cp': cp, 'gravity': gravity, 'L': L,
+                  'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs, 'g_kwargs': g_kwargs_decay, 'l': l,
+                  'pressures': pressures}  # needs to match signature to heating_rate_function}
 
     soln = solve_pde(t0, tf, U_0, calc_total_heating_rate_numeric, ivp_kwargs,
                      verbose=True, show_progress=True, max_step=max_step, save_progress=save_progress)
@@ -951,7 +1090,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
 
 
 def solve_hot_initial(N=1000, Nt_min=1000, t_buffer_Gyr=4.5, verbose=True, writefile=None, plot=True,
-                     figpath=None, Mantle=None, cmap='magma'):
+                      figpath=None, Mantle=None, cmap='magma'):
     """ test generic case """
     from MLTMantle import (get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure)
     from PlanetInterior import pt_profile

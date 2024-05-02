@@ -495,22 +495,10 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
         hf.create_dataset('internal_heating_rate', data=g, dtype=g.dtype)
         hf.create_dataset('viscosity', data=eta, dtype=eta.dtype)
 
-        # # viscosity
-        # eta = ivp_kwargs['eta_function'](soln.y, ivp_kwargs['pressures'], **ivp_kwargs['eta__kwargs'])
-        # hf.create_dataset('viscosity', data=eta, dtype=eta.dtype)
-        #
-        # # internal heating
-        # g = ivp_kwargs['g_function'](soln.t, ivp_kwargs['zp'], **ivp_kwargs['g_kwargs'])
-        # hf.create_dataset('internal_heating', data=g, dtype=g.dtype)
-        #
-        # # surface heat flow
-        # q_sfc =
-
         # add all other ivp args
         for k, v in ivp_kwargs.items():
-            # turn functions into strings
             if callable(k):
-                hf.create_dataset(k, data=eval(v + '.__name__'))
+                hf.create_dataset(k, data=eval(v + '.__name__'))  # turn functions into strings
             else:
                 hf.create_dataset(k, data=v, dtype=v.dtype)
 
