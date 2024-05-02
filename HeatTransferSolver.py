@@ -985,8 +985,8 @@ def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True
     kappa = Mantle.kappa_m
 
     # boundary conditions
-    Tsurf = Mantle.Tsurf
-    Tcmb0 = Mantle.Tcmb0  # only used for initial condition, bc is constant flux
+    # Tsurf = Mantle.Tsurf
+    # Tcmb0 = Mantle.Tcmb0  # only used for initial condition, bc is constant flux
 
     # pressure profile
     pressures = Mantle.P
