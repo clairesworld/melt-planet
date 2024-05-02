@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 """ iniitialise """
 # initialise planetary interior with constant density, alpha, etc
-pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
+# pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
 # pl = planet.PlanetInterior(name=name)
 # pl.initialise_constant(n=50000, rho=4500, cp=1190, alpha=3e-5)
 # pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
@@ -19,9 +19,9 @@ pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
 # pl.plot_structure_p()
 
 # generate mantle object
-man = mlt.MLTMantle(pl, Nm=10000, verbose=True)
+# man = mlt.MLTMantle(pl, Nm=10000, verbose=True)
 # set fixed T boundary conditions/initial condition - may be overwritten by initial temperature profile
-man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
+# man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
 
 """ test with full class """
 # soln = man.solve(t0_Gyr=0, tf_Gyr=5, t0_buffer_Gyr=0,#5,
