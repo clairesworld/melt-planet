@@ -946,7 +946,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
             plt.show()
 
 
-def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True, writefile=None, plot=True,
+def test_Tachinami(Nm=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True, writefile=None, plot=True,
                    figpath=None, save_progress=None, cmap='magma', **kwargs):
     """ try to reproduce Tachinami exactly minus core = problem that discontinuities in k etc mess up solver"""
     from MLTMantle import get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure, MLTMantle
@@ -960,7 +960,7 @@ def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True
     # pl.save(output_path='output/tests/')
 
     # generate mantle object
-    Mantle = MLTMantle(pl, Nm=10000, verbose=True)
+    Mantle = MLTMantle(pl, Nm=Nm, bottom_coarsening=2, verbose=True)
 
     # set up grid/domain
     N = Mantle.Nm

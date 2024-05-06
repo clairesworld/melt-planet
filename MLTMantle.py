@@ -140,7 +140,8 @@ class MLTMantle:
     inherits interior structure w/ defined rho, g, alpha, cp, P, r - this will need to be nondimensionalised somehow
     defaults for isoviscous case and constant internal heating rate """
 
-    def __init__(self, planet, Nm=10000, Nt=10000, dimensional_attr=default_attr, verbose=False, **kwargs):
+    def __init__(self, planet, Nm=10000, Nt=10000, dimensional_attr=default_attr, verbose=False, bottom_coarsening=None,
+                                                                                                    **kwargs):
         self.kappa_m = None
         assert isinstance(planet, PlanetInterior.PlanetInterior)
 
@@ -167,7 +168,7 @@ class MLTMantle:
         # initialise grid and assign time-independent parameter values
         self.make_grid(Nm, Nt)
         self.set_dimensional_attr(dimensional_attr)
-        self.interpolate_mantle_structure()
+        self.interpolate_mantle_structure(bottom_coarsening=bottom_coarsening)
         self.set_thermal_conductivity_and_diffusivity(**kwargs)
 
     def set_dimensional_attr(self, new_attr):
@@ -222,7 +223,7 @@ class MLTMantle:
         if self.verbose:
             print('initialised dimensionless grid array with Nm =', Nm, 'elements in z and Nt =', Nt, 'elements in t')
 
-    def interpolate_mantle_structure(self, interpolation_method='linear'):
+    def interpolate_mantle_structure(self, interpolation_method='linear', bottom_coarsening=None):
         """ get dimensional mantle values, interpolate pressure-density profiles if smaller grid"""
         try:
             assert self.Nm is not None
@@ -230,11 +231,23 @@ class MLTMantle:
             raise AssertionError('Missing grid (call make_grid())')
 
         i_base = self.planet.i_cmb + 1
+        self.d = self.planet.radius[-1] - self.planet.radius[i_base]
 
         # dimensional radius
-        self.r = np.linspace(self.planet.radius[i_base], self.planet.radius[-1], num=self.Nm,
-                             endpoint=True)  # z prime from 0->1
-        self.d = self.r[-1] - self.r[0]
+        if bottom_coarsening is None:
+            self.r = np.linspace(self.planet.radius[i_base], self.planet.radius[-1], num=self.Nm,
+                                 endpoint=True)  # z prime from 0->1
+
+        else:
+            # make bottom half coarser
+            assert self.Nm % bottom_coarsening == 0
+            r_mid = self.planet.radius[-1] - (self.d / 2)
+            Nb = self.Nm / (1 + bottom_coarsening)
+            Nt = bottom_coarsening * Nb
+            r_b = np.linspace(self.planet.radius[i_base], r_mid, num=Nb, endpoint=False)
+            r_t = np.linspace(r_mid, self.planet.radius[-1], num=Nt, endpoint=True)
+            self.r = np.concatenate((r_b, r_t))
+            print('r (km)', self.r * 1e-3)
 
         # get dimensional mantle values
         self.P = self.planet.pressure[i_base:]  # Pa
