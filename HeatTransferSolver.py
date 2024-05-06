@@ -15,15 +15,21 @@ years2sec = 3.154e7
 #################### boundary conditions #########################
 
 
-def initial_file(fin, outputpath="/home/claire/Works/melt-planet/output/tests/"):
+def initial_file(fin, outputpath="/home/claire/Works/melt-planet/output/tests/", z=None):
     if fin.endswith('.h5py'):
         from MLTMantle import read_h5py
         soln = read_h5py(fin, outputpath, verbose=True)
-        return soln['temperature'][:, -1]
+        U_0 = soln['temperature'][:, -1]
     elif fin.endswith('.csv'):
         import pandas as pd
         df = pd.read_csv(outputpath + fin, names=['radius', 'temperature'])
-        return df.temperature
+        U_0 = df.temperature
+
+    if len(z) != len(U_0):
+        # interpolate
+        U_0 = np.interp(z, np.linspace(0, 1, len(U_0), endpoint=True), U_0)  # xnew, x, y
+
+    return U_0
 
 
 def initial_steadystate(z, Tsurf, Tcmb0, alpha, cp, g, l, rho, kc, pressures, g_function, g_kwargs, eta_function,
@@ -1031,7 +1037,7 @@ def test_Tachinami(Nm=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=Tru
 
     # initial T profile - from file
     # U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
-    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
+    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/", z=zp)
 
     def eta_Ranalli(T, P, B, n, E, V, eps, R=8.314, **kwargs):
         return 1 / 2 * (1 / (B ** (1 / n)) * np.exp((E + P * V) / (n * R * T))) * eps ** ((1 - n) / n)
