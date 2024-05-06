@@ -506,3 +506,12 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
             # store planet dictionary attrs as hdf5 metadata
             hf.attrs.update(meta_dict)
             # to print metadata: print(hf1.attrs.keys())
+
+
+def get_Mantle_struct(struct_file='Tachinami_struct.pkl', output_path='output/tests/'):
+    # note k, alpha, cp slightly inconsistent
+    import PlanetInterior as planet
+    import MLTMantle as mlt
+    pl = planet.loadinterior(output_path + struct_file)
+    man = mlt.MLTMantle(pl, Nm=10000, verbose=True)
+    return man

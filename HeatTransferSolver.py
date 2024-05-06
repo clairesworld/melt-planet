@@ -16,9 +16,14 @@ years2sec = 3.154e7
 
 
 def initial_file(fin, outputpath="/home/claire/Works/melt-planet/output/tests/"):
-    from MLTMantle import read_h5py
-    soln = read_h5py(fin, outputpath, verbose=True)
-    return soln['temperature'][:, -1]
+    if fin.endswith('.h5py'):
+        from MLTMantle import read_h5py
+        soln = read_h5py(fin, outputpath, verbose=True)
+        return soln['temperature'][:, -1]
+    elif fin.endswith('.csv'):
+        import pandas as pd
+        df = pd.read_csv(outputpath + fin, names=['radius', 'temperature'])
+        return df.temperature
 
 
 def initial_steadystate(z, Tsurf, Tcmb0, alpha, cp, g, l, rho, kc, pressures, g_function, g_kwargs, eta_function,
@@ -52,11 +57,11 @@ def initial_steadystate(z, Tsurf, Tcmb0, alpha, cp, g, l, rho, kc, pressures, g_
             dTdz_adi = dudx_ambient_function(T2, None, alphai, cpi, gi)
 
             dudz = [(2 * alphai * cpi * dTdz_adi * gi * li ** 4 * rhoi ** 2 - etai * kci - np.sqrt(etai * (
-                        -4 * Hi * alphai * cpi * gi * li ** 4 * rhoi ** 2 * zi - 4 * alphai * cpi * dTdz_adi * gi * kci * li ** 4 * rhoi ** 2 + etai * kci ** 2))) / (
-                                2 * alphai * cpi * gi * li ** 4 * rhoi ** 2), (
-                                2 * alphai * cpi * dTdz_adi * gi * li ** 4 * rhoi ** 2 - etai * kci + np.sqrt(etai * (
-                                    -4 * Hi * alphai * cpi * gi * li ** 4 * rhoi ** 2 * zi - 4 * alphai * cpi * dTdz_adi * gi * kci * li ** 4 * rhoi ** 2 + etai * kci ** 2))) / (
-                                2 * alphai * cpi * gi * li ** 4 * rhoi ** 2)]
+                    -4 * Hi * alphai * cpi * gi * li ** 4 * rhoi ** 2 * zi - 4 * alphai * cpi * dTdz_adi * gi * kci * li ** 4 * rhoi ** 2 + etai * kci ** 2))) / (
+                            2 * alphai * cpi * gi * li ** 4 * rhoi ** 2), (
+                            2 * alphai * cpi * dTdz_adi * gi * li ** 4 * rhoi ** 2 - etai * kci + np.sqrt(etai * (
+                            -4 * Hi * alphai * cpi * gi * li ** 4 * rhoi ** 2 * zi - 4 * alphai * cpi * dTdz_adi * gi * kci * li ** 4 * rhoi ** 2 + etai * kci ** 2))) / (
+                            2 * alphai * cpi * gi * li ** 4 * rhoi ** 2)]
 
 
 # def initial_ss():
@@ -887,32 +892,18 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
 
     # initial T profile - from file
     # U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
-    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
+    # U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
+    U_0 = initial_file("Tachninami_TR_1ME_5Gyr.csv", outputpath="output/tests/benchmarks/")
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
     eta_kwargs = {}  # Tackley - kwargs hardcoded into function for the time being
 
-    # # plot internal heating
-    # plt.figure()
-    # t = np.linspace(t0, tf)  # seconds
-    # print('tf', t[-1], 'seconds')
-    # plt.plot(t / (years2sec * 1e9), [radiogenic_heating(tt, x=None, **g_kwargs_decay) for tt in t],
-    #          label='Radiogenic heating')
-    # plt.xlabel('t (Gyr)')
-    # plt.ylabel('H (W/m3)')
-    # plt.legend()
-    # plt.show()
 
-    # viscosity at fixed T_cmb
-    # eta_b =  alpha * rho ** 2 * gravity * H * L ** 5 / (kappa * kc * RaH)
-    # eta_b = Arrhenius_viscosity_law(Tcmb0, None, **eta_kwargs_Arr)
-    # print('eta_b', eta_b)
-
-    ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, Arrhenius_viscosity_law_pressure,
-                rad_heating_forward, kc, alpha, rho, cp, gravity, L,
-                l_kwargs, eta_kwargs, g_kwargs_decay, l,
-                pressures)  # needs to match signature to heating_rate_function
+    # ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, Arrhenius_viscosity_law_pressure,
+    #             rad_heating_forward, kc, alpha, rho, cp, gravity, L,
+    #             l_kwargs, eta_kwargs, g_kwargs_decay, l,
+    #             pressures)  # needs to match signature to heating_rate_function
 
     ivp_kwargs = {'dx': dx, 'zp': zp, 'get_mixing_length_and_gradient_smooth': get_mixing_length_and_gradient_smooth,
                   'dudx_ambient': dudx_ambient, 'eta_function': Arrhenius_viscosity_law_pressure,
@@ -957,7 +948,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
 
 def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True, writefile=None, plot=True,
                    figpath=None, save_progress=None, cmap='magma', **kwargs):
-    """ test generic case """
+    """ try to reproduce Tachinami exactly minus core = problem that discontinuities in k etc mess up solver"""
     from MLTMantle import get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure, MLTMantle
     from PlanetInterior import pt_profile
     from MLTMantle import save_h5py_solution
@@ -990,7 +981,7 @@ def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True
 
     # pressure profile
     pressures = Mantle.P
-    Tp = Mantle.T_adiabat
+    # Tp = Mantle.T_adiabat
 
     L = Rp - Rc  # length scale
     D = 1  # dimensionless length scale
@@ -998,14 +989,14 @@ def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True
     t0, tf = t_buffer_Myr * 1e6 * years2sec, age_Gyr * 1e9 * years2sec  # seconds
 
     # lower mantle values
-    i_lm_top = planet.find_lower_mantle(pressures) #  lower mantle from idx = 0:i_lm_top
-    kc[0:i_lm_top + 1] = 10
-    alpha[0:i_lm_top + 1] = 2.4e-5
-    cp[0:i_lm_top + 1] = 1260
+    i_lm_top = planet.find_lower_mantle(pressures)  #  lower mantle from idx = 0:i_lm_top
+    # kc[0:i_lm_top + 1] = 10  # this introduces a discontinuity that is annoying
+    # alpha[0:i_lm_top + 1] = 2.4e-5
+    # cp[0:i_lm_top + 1] = 1260
 
     # upper mtl
-    cp[i_lm_top + 1:] = 1250
-    alpha[i_lm_top + 1:] = 3.6e-5
+    # cp[i_lm_top + 1:] = 1250
+    # alpha[i_lm_top + 1:] = 3.6e-5
 
     # viscosity params
     B = np.zeros_like(pressures)
@@ -1041,8 +1032,7 @@ def test_Tachinami(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True
     U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
 
     def eta_Ranalli(T, P, B, n, E, V, eps, R=8.314, **kwargs):
-        return 1/2 * ( 1/(B ** (1/n)) * np.exp((E + P * V) / (n * R * T)) ) * eps ** ((1-n) / n)
-
+        return 1 / 2 * (1 / (B ** (1 / n)) * np.exp((E + P * V) / (n * R * T))) * eps ** ((1 - n) / n)
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
