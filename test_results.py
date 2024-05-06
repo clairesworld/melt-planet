@@ -6,7 +6,7 @@ import PlanetInterior as planet
 name = 'Tachinami_full'
 
 
-def load_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=None, fig=None, ax=None):
+def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=None, fig=None, ax=None, **plot_kwargs):
     import pickle as pkl
     import glob
 
@@ -28,9 +28,10 @@ def load_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
             if log:
                 data = np.log10(data)
             if xvar is not None:
-                ax.plot(xvar, data)
+                ax.plot(xvar, data, **plot_kwargs)
             else:
-                ax.plot(data)
+                ax.plot(data, **plot_kwargs)
+    return fig, ax
 
 
 # fig, axes = plt.subplots(1, 3)
