@@ -385,7 +385,7 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_kwargs, max_step=1e6 * yea
 
 def calc_thermal_state(t=None, u=None, dx=None, xprime=None, l_function=None, dudx_ambient_function=None,
                        eta_function=None, g_function=None, kc=None, alpha=None, rho=None, cp=None, gravity=None, L=None,
-                       l_kwargs=None, eta_kwargs=None, g_kwargs=None, l=None, pressures=None, zp=None):
+                       l_kwargs=None, eta_kwargs=None, g_kwargs=None, l=None, pressures=None, **kwargs):
     # update viscosity
     eta = eta_function(u, pressures, **eta_kwargs)
 
