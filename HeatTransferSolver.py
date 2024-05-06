@@ -960,7 +960,9 @@ def test_Tachinami(Nm=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=Tru
     # pl.save(output_path='output/tests/')
 
     # generate mantle object
-    Mantle = MLTMantle(pl, Nm=Nm, bottom_coarsening=2, verbose=True)
+    Mantle = MLTMantle(pl, Nm=Nm,
+                       #bottom_coarsening=2,
+                       verbose=True)
 
     # set up grid/domain
     N = Mantle.Nm
