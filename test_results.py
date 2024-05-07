@@ -3,7 +3,7 @@ import numpy as np
 from MLTMantle import years2sec, get_Mantle_struct
 import PlanetInterior as planet
 
-name = 'Tachinami_full'
+name = 'Tachinami_viscosity'
 
 
 def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=None, fig=None, ax=None, **plot_kwargs):
@@ -31,6 +31,7 @@ def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
                 ax.plot(xvar, data, **plot_kwargs)
             else:
                 ax.plot(data, **plot_kwargs)
+    ax.set_ylabel(plot_key)
     return fig, ax
 
 
@@ -39,8 +40,10 @@ def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
 man = get_Mantle_struct()
 # pressures = man.P * 1e-9
 #
-# load_pickle_timesteps(name, plot_key='q', output_path='output/tests/tmp/', xvar=pressures, fig=None, ax=None)
-# plt.show()
+plot_pickle_timesteps(name, plot_key='u', output_path='output/tests/tmp/',
+                      #xvar=pressures, fig=None, ax=None
+                      )
+plt.show()
 
 
 """ checks """

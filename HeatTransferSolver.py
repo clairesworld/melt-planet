@@ -1040,7 +1040,8 @@ def test_Tachinami(Nm=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=Tru
     U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/", z=zp)
 
     def eta_Ranalli(T, P, B, n, E, V, eps, R=8.314, **kwargs):
-        return 1 / 2 * (1 / (B ** (1 / n)) * np.exp((E + P * V) / (n * R * T))) * eps ** ((1 - n) / n)
+            return 1 / 2 * (1 / (B ** (1 / n)) * np.exp((E + P * V) / (n * R * T))) * eps ** ((1 - n) / n)
+
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
