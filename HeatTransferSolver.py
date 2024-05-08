@@ -305,7 +305,8 @@ def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
     try:
         H = np.sum(H0 * np.exp((-t_Myr) * np.log(2) / tau))
     except ValueError:
-        H = np.zeros_like(c0)
+        H = np.zeros_like(t)
+        print('H', np.shape(H), 'H0', np.shape(H0), 'tau', np.shape(tau), 't', np.shape(t_Myr))
         for ii in range(len(c0)):
             H += H0[ii] * np.exp((-t_Myr) * np.log(2) / tau[ii])
     return H * rho  # W m-3
