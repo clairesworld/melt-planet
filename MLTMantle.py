@@ -537,9 +537,11 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
         # add all other ivp args
         for k, v in ivp_kwargs.items():
             if callable(k):
+                print('creating dataset', k, '(function)')
                 hf.create_dataset(k, data=eval(v + '.__name__'))  # turn functions into strings
             else:
-                hf.create_dataset(k, data=v, dtype=v.dtype)
+                print('creating dataset', k)
+                hf.create_dataset(k, data=v)
 
         if meta_dict:
             # store planet dictionary attrs as hdf5 metadata

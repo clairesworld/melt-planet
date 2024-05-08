@@ -308,7 +308,6 @@ def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
     except ValueError:
         # can't broadcast time and 4x element shape (and density later)
         H = np.zeros_like(t)
-        print('H', np.shape(H), 'H0', np.shape(H0), 'tau', np.shape(tau), 't', np.shape(t_Myr))
         for ii in range(len(c0)):
             H += H0[ii] * np.exp((-t_Myr) * np.log(2) / tau[ii])
         H_Wm3 = np.zeros((len(rho), len(t)))

@@ -8,7 +8,6 @@ sys.path
 sys.path.append('/home/claire/Works/rocky-water/py/')
 from useful_and_bespoke import colorize
 
-name = 'Tachinami_viscosity'
 
 
 def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=None, fig=None, ax=None, **plot_kwargs):
@@ -75,15 +74,22 @@ def plot_velocity(man, name, output_path, fig=None, ax=None):
     A = 4 * np.pi * man.r[-1] ** 2 * 0.5  # half of surface area is upwelling
     dmdt = rho * A * v  # mass flux through surface of sphere
 
+    ax.plot(z, v)
+    ax.set_ylabel('velocity (m/s)')
+
+name = 'Tachinami_viscosity'
 
 # fig, axes = plt.subplots(1, 3)
 
-man = get_Mantle_struct()
+man = get_Mantle_struct(Nm=1000)
 # pressures = man.P * 1e-9
 #
-plot_pickle_timesteps(name, plot_key='u', output_path='output/tests/tmp/',
-                      #xvar=pressures, fig=None, ax=None
-                      )
+# plot_pickle_timesteps(name, plot_key='u', output_path='output/tests/tmp/',
+#                       #xvar=pressures, fig=None, ax=None
+#                       )
+
+plot_velocity(man, name, output_path='output/tests/tmp/', fig=None, ax=None)
+
 plt.show()
 
 
