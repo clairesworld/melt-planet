@@ -109,7 +109,7 @@ def decompression_melting(name, outputpath=None, p_max_melt=10, p_max_plot=22):
 
     # init lithologies
     lz = m.lithologies.matthews.klb1(rhos=man.rho_m[i_10] * 1e-3, alphas=man.alpha_m[i_10] * 1e6, CP=man.cp_m[i_10])
-    px = m.lithologies.matthews.kg1(rhos=man.rho_m[i_10] * 1e-3, alphas=man.alpha_m[i_10] * 1e6, CP=man.cp_m[i_10])
+    # px = m.lithologies.matthews.kg1(rhos=man.rho_m[i_10] * 1e-3, alphas=man.alpha_m[i_10] * 1e6, CP=man.cp_m[i_10])
     hz = m.lithologies.shorttle.harzburgite(rhos=man.rho_m[i_10] * 1e-3, alphas=man.alpha_m[i_10] * 1e6, CP=man.cp_m[i_10])
 
     hlz = m.hydrousLithology(lz, 0.1, continuous=True,
@@ -117,7 +117,7 @@ def decompression_melting(name, outputpath=None, p_max_melt=10, p_max_plot=22):
     hlz_batch = m.hydrousLithology(lz, 0.1)
 
     # put into pymelt mantle object - mostly lherzolite mantle
-    mantle = m.mantle([hlz, px, hz], [6, 2, 2], ['HLz', 'Px', 'Hz'])
+    mantle = m.mantle([hlz, hz], [8, 2], ['HLz', 'Px', 'Hz'])
 
     print('pymelt object', mantle.bulkProperties())
     print('T', mantle.adiabat(10, Tp_C) + 273.15, 'K')
