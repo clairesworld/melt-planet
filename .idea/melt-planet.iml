@@ -7,5 +7,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="burnman" />
+    <orderEntry type="module" module-name="pyMelt" />
   </component>
 </module>

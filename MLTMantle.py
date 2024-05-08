@@ -421,7 +421,7 @@ class MLTMantle:
         return soln
 
 
-    def plot_temperature_evol(self, soln, timestep='all', cmap='magma', figpath=None):
+    def plot_temperature_evol(self, soln, which='zp', timestep='all', cmap='magma', figpath=None):
         import matplotlib.pyplot as plt
         import matplotlib.colors as mcolors
         import matplotlib.cm as cmx
@@ -434,15 +434,22 @@ class MLTMantle:
 
         # temperature evolution
         fig = plt.figure()
+        if which == 'zp':
+            x = self.zp
+            plt.xlabel('z/L')
+        elif which == 'pressure':
+            x = self.P * 1e-9
+            plt.xlabel('P (GPa)')
+        plt.ylabel('T (K)')
+
         if timestep == 'all':
-            for n in np.arange(len(soln.t))[::100]:
+            for n in np.arange(len(soln.t))[::100]:  # every 100th timestep
                 plt.plot(self.zp, soln.y[:, int(n)], c=c[n])
         elif isinstance(timestep, int):
             plt.plot(self.zp, soln.y[:, timestep], c=c[timestep])
         else:
             raise NotImplementedError
-        plt.xlabel('z/L')
-        plt.ylabel('T (K)')
+
         plt.colorbar(
             plt.gca().scatter(soln.t / years2sec * 1e-6, soln.t / years2sec * 1e-6, c=soln.t / years2sec * 1e-6,
                               cmap='magma', s=0), label='time (Myr)')
@@ -452,6 +459,7 @@ class MLTMantle:
         if figpath is not None:
             fig.savefig(figpath, bbox_inches='tight')
         # plt.show()
+        return fig, plt.gca()
 
 
 def read_h5py(fin, outputpath, verbose=True):
@@ -501,7 +509,10 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
     print('kwargs:')
     for k, v in ivp_kwargs.items():
         if hasattr(v,"shape"):
-            print(k, '[0]', v[0])
+            try:
+                print(k, '[0]', v[0])
+            except IndexError:
+                print(k, v)
         else:
             print(k, v)
 

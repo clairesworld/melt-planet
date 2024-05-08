@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/../burnman/burnman/.idea/burnman.iml" filepath="$PROJECT_DIR$/../burnman/burnman/.idea/burnman.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/melt-planet.iml" filepath="$PROJECT_DIR$/.idea/melt-planet.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../pyMelt/.idea/pyMelt.iml" filepath="$PROJECT_DIR$/../pyMelt/.idea/pyMelt.iml" />
     </modules>
   </component>
 </project>
