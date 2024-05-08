@@ -1030,6 +1030,8 @@ def test_Tachinami(Nm=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=Tru
         if verbose:
             print('max step: inf')
 
+    max_step = np.inf
+
     # MLT constants
     alpha_mlt, beta_mlt = 0.82, 1  # Tachinami 2011
     lp, dldx = get_mixing_length_and_gradient_smooth(zp, alpha_mlt, beta_mlt)

@@ -57,7 +57,8 @@ import matplotlib.pyplot as plt
 #                  figpath='figs_scratch/' + name + '.pdf')
 
 name = 'blob'  # test difference in viscosity law
-test_Tachinami(Nm=1000, Nt_min=1000, age_Gyr=0.01,
+test_Tachinami(Nm=1000, #Nt_min=1000,
+               age_Gyr=0.001,
                  writefile='output/tests/' + name + '.h5py', plot=False,
                  save_progress= 'output/tests/tmp/' + name + '.pkl',
                  figpath='figs_scratch/' + name + '.pdf')

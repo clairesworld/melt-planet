@@ -508,11 +508,14 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
 
     print('kwargs:')
     for k, v in ivp_kwargs.items():
-        if hasattr(v,"shape"):
-            try:
-                print(k, '[0]', v[0])
-            except IndexError:
-                print(k, v)
+        try:
+            print(k, v.keys())
+        except:
+            if hasattr(v, "shape"):
+                try:
+                    print(k, '[0]', v[0])
+                except IndexError:
+                    print(k, v)
         else:
             print(k, v)
 
@@ -543,10 +546,10 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
             # to print metadata: print(hf1.attrs.keys())
 
 
-def get_Mantle_struct(struct_file='Tachinami_struct.pkl', output_path='output/tests/'):
+def get_Mantle_struct(struct_file='Tachinami_struct.pkl', output_path='output/tests/', Nm=10000):
     # note k, alpha, cp slightly inconsistent
     import PlanetInterior as planet
     import MLTMantle as mlt
     pl = planet.loadinterior(output_path + struct_file)
-    man = mlt.MLTMantle(pl, Nm=10000, verbose=True)
+    man = mlt.MLTMantle(pl, Nm=Nm, verbose=True)
     return man
