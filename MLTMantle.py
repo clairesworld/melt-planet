@@ -538,7 +538,7 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
         for k, v in ivp_kwargs.items():
             if callable(v):
                 print('creating dataset', k, '(function)')
-                hf.create_dataset(k, data=k.__name__)  # turn functions into strings
+                hf.create_dataset(k, data=v.__name__)  # turn functions into strings
             else:
                 print('creating dataset', k)
                 hf.create_dataset(k, data=v)
