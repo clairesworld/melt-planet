@@ -302,7 +302,12 @@ def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
     tau = np.array([1250, 4468, 703.8, 14040])  # half life in Myr
     H0 = c0 * hn * np.exp(4500 * np.log(2) / tau)  # initial heating based on (scaled) BSE concentrations
 
-    H = np.sum(H0 * np.exp((-t_Myr) * np.log(2) / tau))
+    try:
+        H = np.sum(H0 * np.exp((-t_Myr) * np.log(2) / tau))
+    except ValueError:
+        H = np.zeros_like(c0)
+        for ii in range(len(c0)):
+            H += H0[ii] * np.exp((-t_Myr) * np.log(2) / tau[ii])
     return H * rho  # W m-3
 
 
