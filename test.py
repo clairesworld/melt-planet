@@ -14,10 +14,11 @@ name = 'Tackley_viscosity_3ME'  # test difference in viscosity law
 """ iniitialise """
 # initialise planetary interior with constant density, alpha, etc
 # pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
-pl = planet.PlanetInterior(name=name, M=3*M_E)
-pl.initialise_constant(n=50000, rho=4500, cp=1190, alpha=3e-5)
-pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
-pl.save(output_path='output/tests/')
+pl = planet.loadinterior('output/tests/' + name + '_struct.pkl')
+# pl = planet.PlanetInterior(name=name, M=3*M_E)
+# pl.initialise_constant(n=50000, rho=4500, cp=1190, alpha=3e-5)
+# pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
+# pl.save(output_path='output/tests/')
 # pl.plot_structure_p()
 
 

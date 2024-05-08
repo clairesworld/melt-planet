@@ -10,7 +10,7 @@ from useful_and_bespoke import colorize
 
 
 
-def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=None, fig=None, ax=None, **plot_kwargs):
+def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=None, fig=None, ax=None, last=False, **plot_kwargs):
     import pickle as pkl
     import glob
 
@@ -27,6 +27,9 @@ def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
         fig = plt.figure()
         ax = plt.gca()
 
+    if last:
+        files = [files[-1]]
+
     c = colorize(np.arange(len(files)), cmap='magma')[0]
     for ii, f in enumerate(files):  # all timesteps
         with open(f, "rb") as pfile:
@@ -35,7 +38,10 @@ def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
             if log:
                 data = np.log10(data)
             if xvar is not None:
-                ax.plot(xvar, data, c=c[ii], **plot_kwargs)
+                try:
+                    ax.plot(d[xvar], data, c=c[ii], **plot_kwargs)
+                except (KeyError, TypeError):
+                    ax.plot(xvar, data, c=c[ii], **plot_kwargs)
             else:
                 ax.plot(data, c=c[ii], **plot_kwargs)
     ax.set_ylabel(plot_key)
@@ -78,20 +84,21 @@ def plot_velocity(man, name, output_path, fig=None, ax=None):
     ax.set_ylabel('velocity (m/s)')
 
 
-def plot_viscosity(man, name, output_path, fig=None, ax=None)
 
 name = 'Tachinami_viscosity'
 
 # fig, axes = plt.subplots(1, 3)
 
 man = get_Mantle_struct(Nm=1000)
-# pressures = man.P * 1e-9
+pressures = man.P * 1e-9
 #
 # plot_pickle_timesteps(name, plot_key='u', output_path='output/tests/tmp/',
 #                       #xvar=pressures, fig=None, ax=None
 #                       )
 
 # plot_velocity(man, name, output_path='output/tests/tmp/', fig=None, ax=None)
+
+plot_pickle_timesteps(name, 'eta', output_path='output/tests/tmp/', xvar=pressures, last=True)
 
 # plt.show()
 
@@ -100,11 +107,11 @@ man = get_Mantle_struct(Nm=1000)
 
 # compare viscosity profiles
 #
-eta0 = eta_Ranalli(U_0, pressures, **eta_kwargs)
-plt.plot(np.log10(eta0), pressures * 1e-9)
-plt.plot(np.log10(Arrhenius_viscosity_law_pressure(U_0, pressures)), pressures * 1e-9)
-plt.gca().invert_yaxis()
-plt.show()
+# eta0 = eta_Ranalli(U_0, pressures, **eta_kwargs)
+# plt.plot(np.log10(eta0), pressures * 1e-9)
+# plt.plot(np.log10(Arrhenius_viscosity_law_pressure(U_0, pressures)), pressures * 1e-9)
+# plt.gca().invert_yaxis()
+# plt.show()
 
 
 # viscosity at fixed T_cmb

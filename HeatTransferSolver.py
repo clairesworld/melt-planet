@@ -913,7 +913,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
 
     # initial T profile - from file
     # U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
-    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
+    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/", z=zp)
     # U_0 = initial_file("Tachninami_TR_1ME_5Gyr.csv", outputpath="output/tests/benchmarks/")
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
