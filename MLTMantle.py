@@ -536,7 +536,7 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
 
         # add all other ivp args
         for k, v in ivp_kwargs.items():
-            if callable(k):
+            if callable(v):
                 print('creating dataset', k, '(function)')
                 hf.create_dataset(k, data=eval(v + '.__name__'))  # turn functions into strings
             else:

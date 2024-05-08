@@ -64,7 +64,7 @@ def plot_velocity(man, name, output_path, fig=None, ax=None):
     rho = man.rho_m
     g = man.g_m
     cp = man.cp_m
-    l = get_mixing_length_and_gradient_smooth(z, alpha_mlt=0.82, beta_mlt=1, l_smoothing_distance=0.05)
+    l = get_mixing_length_and_gradient_smooth(z, alpha_mlt=0.82, beta_mlt=1, l_smoothing_distance=0.05)[0]
     dudx_adiabat = dudx_ambient(u, z, alpha, cp, g)
 
     dudx = np.gradient(u, z)
