@@ -831,7 +831,7 @@ def test_arrhenius_radheating(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, 
             plt.show()
 
 
-def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=True, writefile=None, plot=True,
+def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=True, writefile=None, plot=False,
                      figpath=None, save_progress=None, Mantle=None, cmap='magma'):
     """ test with p-dependent viscosity and thermal parameters (from Mantle object) """
     from MLTMantle import (get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure)
@@ -913,18 +913,13 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
 
     # initial T profile - from file
     # U_0 = initial_linear(zp, Tsurf, Tcmb0)  # initial temperature
-    # U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
-    U_0 = initial_file("Tachninami_TR_1ME_5Gyr.csv", outputpath="output/tests/benchmarks/")
+    U_0 = initial_file("Tachinami.h5py", outputpath="output/tests/")
+    # U_0 = initial_file("Tachninami_TR_1ME_5Gyr.csv", outputpath="output/tests/benchmarks/")
 
     l_kwargs = {'alpha_mlt': alpha_mlt, 'beta_mlt': beta_mlt}
     g_kwargs_decay = {'rho': rho, 't_buffer_Myr': t_buffer_Myr}
     eta_kwargs = {}  # Tackley - kwargs hardcoded into function for the time being
 
-
-    # ivp_args = (dx, zp, get_mixing_length_and_gradient_smooth, dudx_ambient, Arrhenius_viscosity_law_pressure,
-    #             rad_heating_forward, kc, alpha, rho, cp, gravity, L,
-    #             l_kwargs, eta_kwargs, g_kwargs_decay, l,
-    #             pressures)  # needs to match signature to heating_rate_function
 
     ivp_kwargs = {'dx': dx, 'zp': zp, 'get_mixing_length_and_gradient_smooth': get_mixing_length_and_gradient_smooth,
                   'dudx_ambient': dudx_ambient, 'eta_function': Arrhenius_viscosity_law_pressure,
@@ -968,14 +963,15 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
 
 
 def test_Tachinami(Nm=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=True, writefile=None, plot=True,
-                   figpath=None, save_progress=None, cmap='magma', **kwargs):
+                   figpath=None, save_progress=None, cmap='magma', pl=None, **kwargs):
     """ try to reproduce Tachinami exactly minus core = problem that discontinuities in k etc mess up solver"""
     from MLTMantle import get_mixing_length_and_gradient_smooth, Arrhenius_viscosity_law_pressure, MLTMantle
     from PlanetInterior import pt_profile
     from MLTMantle import save_h5py_solution
     import PlanetInterior as planet
 
-    pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
+    if pl is None:
+        pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
     # pl = planet.PlanetInterior(name='Tachinami_full')
     # pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
     # pl.save(output_path='output/tests/')

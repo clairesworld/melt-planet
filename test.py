@@ -3,25 +3,33 @@ import MLTMantle as mlt
 from HeatTransferSolver import test_arrhenius_radheating, test_pdependence, rad_heating_forward, initial_steadystate, \
     dudx_ambient, solve_hot_initial, test_Tachinami
 import matplotlib.pyplot as plt
+M_E = 5.972e24  # earth mass in kg
 
 #/network/group/aopp/planetary/RTP037_GUIMOND_MANTMELT
 
 
 # mixing_length_kwargs = {'alpha_mlt': 0.82, 'beta_mlt': 1}
+name = 'Tackley_viscosity_3ME'  # test difference in viscosity law
 
 """ iniitialise """
 # initialise planetary interior with constant density, alpha, etc
 # pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
-# pl = planet.PlanetInterior(name=name)
+pl = planet.PlanetInterior(name=name, M=2*M_E)
 # pl.initialise_constant(n=50000, rho=4500, cp=1190, alpha=3e-5)
-# pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
-# pl.save(output_path='output/tests/')
+pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
+pl.save(output_path='output/tests/')
 # pl.plot_structure_p()
 
+
 # generate mantle object
-# man = mlt.MLTMantle(pl, Nm=10000, verbose=True)
+man = mlt.MLTMantle(pl, Nm=1000, verbose=True)
 # set fixed T boundary conditions/initial condition - may be overwritten by initial temperature profile
-# man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
+man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
+
+
+test_pdependence(N=1000, Nt_min=1000, age_Gyr=4.5, verbose=True, writefile='output/tests/' + name + '.h5py',
+                 # save_progress='output/tests/tmp/' + name + '.pkl',
+                 Mantle=man)
 
 """ test with full class """
 # soln = man.solve(t0_Gyr=0, tf_Gyr=5, t0_buffer_Gyr=0,#5,
@@ -56,12 +64,6 @@ import matplotlib.pyplot as plt
 #                  save_progress= 'output/tests/tmp/' + name + '.pkl',
 #                  figpath='figs_scratch/' + name + '.pdf')
 
-name = 'blob'  # test difference in viscosity law
-test_Tachinami(Nm=1000, #Nt_min=1000,
-               age_Gyr=0.001,
-                 writefile='output/tests/' + name + '.h5py', plot=False,
-                 save_progress= 'output/tests/tmp/' + name + '.pkl',
-                 figpath='figs_scratch/' + name + '.pdf')
 
 # """ get steady state T profile with iterative method """
 # r = man.zp * man.d + man.r[0]  # m

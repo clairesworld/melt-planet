@@ -1,7 +1,7 @@
 import sys
 sys.path
 sys.path.append('/home/claire/Works/exo-top/')
-import exotop.model_1D as bl
+import exotop.model_1D as blt
 
 planet_kwargs = dict(
     ident='baseline',  # must match dict name ****_in
@@ -28,6 +28,6 @@ planet_kwargs = dict(
     Ea=300e3, # activation energy in J, K&W (1993) dry olivine
     #     V_rh=6e-6, # activation volume in m^3, K&W (1993)  dry olivine
 )
-run_kwargs = dict(T_m0=1750, T_c0=2250, D_l0=150e3, tf=4.5, visc_type='KW')  # model params
+run_kwargs = dict(T_m0=1750, T_c0=2250, D_l0=150e3, tf=4.5, visc_type='Thi')  # model params
 
-bl.evolve.build_planet(planet_kwargs, run_kwargs, solve_ODE=True)
+pl = blt.evolve.build_planet(planet_kwargs, run_kwargs, solve_ODE=True)

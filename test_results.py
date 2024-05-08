@@ -77,6 +77,9 @@ def plot_velocity(man, name, output_path, fig=None, ax=None):
     ax.plot(z, v)
     ax.set_ylabel('velocity (m/s)')
 
+
+def plot_viscosity(man, name, output_path, fig=None, ax=None)
+
 name = 'Tachinami_viscosity'
 
 # fig, axes = plt.subplots(1, 3)
@@ -88,20 +91,20 @@ man = get_Mantle_struct(Nm=1000)
 #                       #xvar=pressures, fig=None, ax=None
 #                       )
 
-plot_velocity(man, name, output_path='output/tests/tmp/', fig=None, ax=None)
+# plot_velocity(man, name, output_path='output/tests/tmp/', fig=None, ax=None)
 
-plt.show()
+# plt.show()
 
 
 """ checks """
 
 # compare viscosity profiles
 #
-# eta0 = eta_Ranalli(U_0, pressures, **eta_kwargs)
-# plt.plot(np.log10(eta0), pressures * 1e-9)
-# plt.plot(np.log10(Arrhenius_viscosity_law_pressure(U_0, pressures)), pressures * 1e-9)
-# plt.gca().invert_yaxis()
-# plt.show()
+eta0 = eta_Ranalli(U_0, pressures, **eta_kwargs)
+plt.plot(np.log10(eta0), pressures * 1e-9)
+plt.plot(np.log10(Arrhenius_viscosity_law_pressure(U_0, pressures)), pressures * 1e-9)
+plt.gca().invert_yaxis()
+plt.show()
 
 
 # viscosity at fixed T_cmb
@@ -113,4 +116,4 @@ plt.show()
 # density profile
 # pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
 # pl.plot_structure_r()
-# plt.show()
+plt.show()
