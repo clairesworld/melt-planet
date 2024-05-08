@@ -516,8 +516,9 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
                     print(k, '[0]', v[0])
                 except IndexError:
                     print(k, v)
-        else:
-            print(k, v)
+            else:
+                print(k, v)
+    print('keys:', ivp_kwargs.keys())
 
     # full thermal state of solution
     # get a broadcasting error - can give this soln.y.T and then re-transpose q, g, eta, but need to double check this doesn't mess up

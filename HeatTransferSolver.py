@@ -349,6 +349,7 @@ def solve_pde(t0, tf, U_0, heating_rate_function, ivp_kwargs, max_step=1e6 * yea
     #     print('\nrequired signature for ivp_args:', str(sig))  # skipping t, u
     #     print('ivp_args', ivp_args)
     #     # print('signature of heating_rate_function', list(sig.parameters.keys())[2:])  # skipping t, u
+    print('keys in solve_pde', ivp_kwargs.keys())
 
     # for use with solve_ivp, need extra args as non-keyword args
     ivp_args = tuple([ivp_kwargs[k] for k in ivp_kwargs.keys()])
@@ -1060,6 +1061,7 @@ def test_Tachinami(Nm=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=10, verbose=Tru
                      verbose=True, show_progress=True, max_step=max_step, save_progress=save_progress)
 
     if writefile:
+        print('keys in test_Tachinami', ivp_kwargs.keys())
         save_h5py_solution(writefile, soln, ivp_kwargs)
 
     if plot:
