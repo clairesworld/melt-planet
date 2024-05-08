@@ -312,7 +312,7 @@ def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
         for ii in range(len(c0)):
             H += H0[ii] * np.exp((-t_Myr) * np.log(2) / tau[ii])
         H_Wm3 = np.zeros((len(rho), len(t)))
-        for ii in len(t):
+        for ii in range(len(t)):
             H_Wm3[:, ii] = H[ii] * rho
         return H_Wm3
         # return np.array([H * rhoii for rhoii in rho])
