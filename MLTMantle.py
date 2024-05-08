@@ -498,7 +498,12 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
     import h5py
     from HeatTransferSolver import calc_thermal_state
 
-    print('kwargs:', ivp_kwargs)
+    print('kwargs:')
+    for k, v in ivp_kwargs.items():
+        if hasattr(v,"shape"):
+            print(k, '[0]', v[0])
+        else:
+            print(k, v)
 
     # full thermal state of solution
     # get a broadcasting error - can give this soln.y.T and then re-transpose q, g, eta, but need to double check this doesn't mess up

@@ -18,7 +18,7 @@ def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
     files = glob.glob(output_path + name + '.pkl*')
     log = False
 
-    print(files)
+    files = sorted(files)
 
     if plot_key == 'eta':
         log = True
@@ -27,7 +27,7 @@ def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
         fig = plt.figure()
         ax = plt.gca()
 
-    c = colorize(files, cmap='magma')[0]
+    c = colorize(np.arange(len(files)), cmap='magma')[0]
     for ii, f in enumerate(files):  # all timesteps
         with open(f, "rb") as pfile:
             d = pkl.load(pfile)
