@@ -535,13 +535,19 @@ def save_h5py_solution(fout, soln, ivp_kwargs={}, meta_dict=None):
         hf.create_dataset('viscosity', data=eta, dtype=eta.dtype)
 
         # add all other ivp args
+        grp = hf.create_group("ivp_args")
         for k, v in ivp_kwargs.items():
             if callable(v):
                 print('creating dataset', k, '(function)')
-                hf.create_dataset(k, data=v.__name__)  # turn functions into strings
+                grp.create_dataset(k, data=v.__name__)  # turn functions into strings
+            elif hasattr(v, 'keys'):
+                grp1 = grp.create_group(k)
+                for key in ivp_kwargs[k].keys():
+                    print('creating dataset', key, 'in', k)
+                    grp1.create_dataset(key, data=ivp_kwargs[k][key])
             else:
                 print('creating dataset', k)
-                hf.create_dataset(k, data=v)
+                grp.create_dataset(k, data=v)
 
         if meta_dict:
             # store planet dictionary attrs as hdf5 metadata
