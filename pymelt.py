@@ -114,13 +114,10 @@ def decompression_melting(name, outputpath=None, p_max_melt=10, p_max_plot=22):
 
     hlz = m.hydrousLithology(lz, 0.1, continuous=True,
                              phi=0.5)  # continuous melting - only matters for hydrous melting because water is extracted
-    hlz_batch = m.hydrousLithology(lz, 0.1)
+    # hlz_batch = m.hydrousLithology(lz, 0.1)
 
     # put into pymelt mantle object - mostly lherzolite mantle
-    mantle = m.mantle([hlz, hz], [8, 2], ['HLz', 'Px', 'Hz'])
-
-    print('pymelt object', mantle.bulkProperties())
-    print('T', mantle.adiabat(10, Tp_C) + 273.15, 'K')
+    mantle = m.mantle([hlz, hz], [8, 2], ['HLz', 'Hz'])
 
     # plot adiabat
     p_plot = np.linspace(0, 22)
@@ -131,8 +128,8 @@ def decompression_melting(name, outputpath=None, p_max_melt=10, p_max_plot=22):
     ax.invert_yaxis()
     ax.set_ylim(22, 0)
 
-    # column = mantle.adiabaticMelt(Tp_C)
-    # f, a = column.plot()
+    column = mantle.adiabaticMelt(Tp_C)
+    f, a = column.plot()
 
     plt.show()
 

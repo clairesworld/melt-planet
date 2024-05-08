@@ -311,7 +311,7 @@ def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
         print('H', np.shape(H), 'H0', np.shape(H0), 'tau', np.shape(tau), 't', np.shape(t_Myr))
         for ii in range(len(c0)):
             H += H0[ii] * np.exp((-t_Myr) * np.log(2) / tau[ii])
-        return H.T * rho
+        return H[np.newaxis, :] * rho
 
 
 
