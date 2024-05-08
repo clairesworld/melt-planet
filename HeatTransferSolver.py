@@ -311,7 +311,11 @@ def rad_heating_forward(t, x, rho, rad_factor=1, t_buffer_Gyr=0, **kwargs):
         print('H', np.shape(H), 'H0', np.shape(H0), 'tau', np.shape(tau), 't', np.shape(t_Myr))
         for ii in range(len(c0)):
             H += H0[ii] * np.exp((-t_Myr) * np.log(2) / tau[ii])
-        return H[np.newaxis, :] * rho
+        H_Wm3 = np.zeros((len(rho), len(t)))
+        for ii in len(t):
+            H_Wm3[:, ii] = H[ii] * rho
+        return H_Wm3
+        # return np.array([H * rhoii for rhoii in rho])
 
 
 
@@ -437,6 +441,8 @@ def calc_total_heating_rate_numeric(t, u, dx, xprime, l_function, dudx_ambient_f
     q, source_term, eta = calc_thermal_state(t, u, dx, xprime, l_function, dudx_ambient_function, eta_function,
                                              g_function, kc,
                                              alpha, rho, cp, gravity, L, l_kwargs, eta_kwargs, g_kwargs, l, pressures)
+
+    #
 
     # calculate divergence of flux
     divq = np.gradient(q, dx)

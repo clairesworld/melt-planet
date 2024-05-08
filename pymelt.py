@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from MLTMantle import years2sec, get_Mantle_struct
 import pandas as pd
 import pickle as pkl
+import time
 
 import sys
 sys.path
@@ -128,7 +129,10 @@ def decompression_melting(name, outputpath=None, p_max_melt=10, p_max_plot=22):
     ax.invert_yaxis()
     ax.set_ylim(22, 0)
 
+    start = time.time()
     column = mantle.adiabaticMelt(Tp_C)
+    end = time.time()
+    print('decompression melt calculation in', (end - start), 'seconds')
     f, a = column.plot()
 
     plt.show()

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from MLTMantle import years2sec, get_Mantle_struct
+from MLTMantle import years2sec, get_Mantle_struct, get_mixing_length_and_gradient_smooth
 import PlanetInterior as planet
 import sys
 sys.path
@@ -40,6 +40,38 @@ def plot_pickle_timesteps(name, plot_key, output_path='output/tests/tmp/', xvar=
                 ax.plot(data, c=c[ii], **plot_kwargs)
     ax.set_ylabel(plot_key)
     return fig, ax
+
+def plot_velocity(man, name, output_path, fig=None, ax=None):
+    # need to find base of lithosphere
+    import glob
+    import pickle as pkl
+
+    # tmp pickle files
+    files = glob.glob(output_path + name + '.pkl*')
+    files = sorted(files)
+
+    if fig is None:
+        fig = plt.figure()
+        ax = plt.gca()
+
+    with open(files[-1], "rb") as pfile:
+        d = pkl.load(pfile)
+        u = d['u']
+        eta = d['eta']
+
+    z = np.linspace(0, 1, len(u))
+    alpha = man.alpha_m
+    rho = man.rho_m
+    g = man.g_m
+    l = get_mixing_length_and_gradient_smooth(z, alpha_mlt=0.82, beta_mlt=1, l_smoothing_distance=0.05)
+    dudx_adiabat =
+
+    dudx = np.gradient(u, z)
+    dT = (dudx_adiabat - dudx) ** 2
+    v = alpha * rho * g * l ** 2 / (18 * eta) * dT
+
+    A = 4 * np.pi * man.r[-1] ** 2 * 0.5  # half of surface area is upwelling
+    dmdt = rho * A * v  # mass flux through surface of sphere
 
 
 # fig, axes = plt.subplots(1, 3)
