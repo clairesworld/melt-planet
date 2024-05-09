@@ -897,14 +897,15 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
     dx = (zp[1] - zp[0]) * L
     t0, tf = t_buffer_Myr * 1e6 * years2sec, age_Gyr * 1e9 * years2sec  # seconds
 
-    try:
-        max_step = (tf - t0) / Nt_min
-        if verbose:
-            print('max step:', max_step / years2sec, 'years')
-    except ZeroDivisionError:
-        max_step = np.inf
-        if verbose:
-            print('max step: inf')
+    # try:
+    #     max_step = (tf - t0) / Nt_min
+    #     if verbose:
+    #         print('max step:', max_step / years2sec, 'years')
+    # except ZeroDivisionError:
+    #     max_step = np.inf
+    #     if verbose:
+    #         print('max step: inf')]
+    max_step = np.inf
 
     # MLT constants
     alpha_mlt, beta_mlt = 0.82, 1  # Tachinami 2011

@@ -7,8 +7,29 @@ M_E = 5.972e24  # earth mass in kg
 
 #/network/group/aopp/planetary/RTP037_GUIMOND_MANTMELT
 
+# 1 M_E
+name = 'Tackley_viscosity_1ME'
 
-# mixing_length_kwargs = {'alpha_mlt': 0.82, 'beta_mlt': 1}
+""" iniitialise """
+# initialise planetary interior with constant density, alpha, etc
+pl = planet.loadinterior('output/tests/Tachinami_struct.pkl')
+# pl = planet.PlanetInterior(name=name, M=1*M_E)
+# pl.initialise_constant(n=50000, rho=4500, cp=1190, alpha=3e-5)
+# pl.solve()  # solve EoS for depth-dependent thermodynamic parameters
+# pl.save(output_path='output/tests/')
+# pl.plot_structure_p()
+
+
+# generate mantle object
+man = mlt.MLTMantle(pl, Nm=1000, verbose=True)
+# set fixed T boundary conditions/initial condition - may be overwritten by initial temperature profile
+man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
+
+test_pdependence(N=1000, Nt_min=1000, age_Gyr=4.5, verbose=True, writefile='output/tests/' + name + '.h5py',
+                 # save_progress='output/tests/tmp/' + name + '.pkl',
+                 Mantle=man)
+
+# 3 M_E
 name = 'Tackley_viscosity_3ME'  # test difference in viscosity law
 
 """ iniitialise """
@@ -26,7 +47,6 @@ pl = planet.loadinterior('output/tests/' + name + '_struct.pkl')
 man = mlt.MLTMantle(pl, Nm=1000, verbose=True)
 # set fixed T boundary conditions/initial condition - may be overwritten by initial temperature profile
 man.set_dimensional_attr({'Tsurf': 300, 'Tcmb0': 3000})
-
 
 test_pdependence(N=1000, Nt_min=1000, age_Gyr=4.5, verbose=True, writefile='output/tests/' + name + '.h5py',
                  # save_progress='output/tests/tmp/' + name + '.pkl',
