@@ -23,7 +23,7 @@ planet_kwargs = dict(
     k_m=4,
     alpha_m=2.5e-5,
     T_s=273,
-    x_Eu=1,  # at 0.7 this is similar to older Treatise values
+    x_Eu=0.5,  # at 0.7 this is similar to older Treatise values
 
     #     # viscosity
     a_rh=2.44, # for beta=1/3 from Thiriet+ (2019)
@@ -44,23 +44,32 @@ def potential_temperature(T, P, alpha, rho, cp):
     return T / np.exp(alpha/(rho * cp) * P)
 
 def convective_profile(Tm, pl, man):
-    Tp = potential_temperature(Tm, man.P, pl.alpha_m, pl.rho_m, pl.c_m)
-
     # Tconv = (Tp * np.exp(pl.alpha_m / (pl.rho_m * pl.c_m) * man.P))
 
     # Seales, Lenardic+ 2022
-    Tconv = Tm * (1 - (pl.g_sfc * pl.alpha_m / pl.c_m) * (pl.R_p - pl.R_c)/2 - man.r)
+    z = man.r[-1] - man.r
+    Tconv = Tm * (1 - (pl.g_sfc * pl.alpha_m / pl.c_m) * ((pl.R_p - pl.R_c)/2 - z))
+    print('Tp', Tm * (1 - (pl.g_sfc * pl.alpha_m / pl.c_m) * ((pl.R_p - pl.R_c)/2 - 0)), 'K')
     return Tconv
 
 def T_profile(pl, man, lid_heating=False, t_idx=-1):
     a0_lid = 0
     lid_base = (np.abs(man.r - pl.R_l[t_idx])).argmin()
     lid_radii = man.r[lid_base:]
-    T_cond = thermal.sph_conduction(lid_radii, a0=a0_lid, T_l=pl.T_l[t_idx], R_l=pl.R_l[t_idx], k_m=pl.k_m,
-                                          T_s=pl.T_s, R_p=pl.R_p)
 
     Tm = pl.T_m[t_idx]  # temperature at base of lithosphere
     print('Tm', Tm)
+
+    Tp_depth = pl.R_l - pl.delta_rh
+    Tp_depth_idx = (np.abs(man.r - Tp_depth[t_idx])).argmin()
+
+    Tp = potential_temperature(Tm, man.P[Tp_depth_idx], pl.alpha_m, pl.rho_m, pl.c_m)
+    print('Tp', Tp, 'K using just below lithosphere')
+
+    T_cond = thermal.sph_conduction(lid_radii, a0=a0_lid, T_l=pl.T_l[t_idx], R_l=pl.R_l[t_idx], k_m=pl.k_m,
+                                          T_s=pl.T_s, R_p=pl.R_p)
+
+
     T_conv = convective_profile(Tm, pl, man)
 
     fig = plt.figure()

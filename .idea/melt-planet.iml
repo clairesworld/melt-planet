@@ -8,5 +8,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="burnman" />
     <orderEntry type="module" module-name="pyMelt" />
+    <orderEntry type="module" module-name="exo-top" />
   </component>
 </module>
