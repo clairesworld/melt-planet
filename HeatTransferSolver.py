@@ -922,7 +922,7 @@ def test_pdependence(N=1000, Nt_min=1000, t_buffer_Myr=0, age_Gyr=4.5, verbose=T
 
 
     ivp_kwargs = {'dx': dx, 'zp': zp, 'l_function': get_mixing_length_and_gradient_smooth,
-                  'dudx_ambient_function': dudx_ambient, 'eta_function': eta_Ranalli,
+                  'dudx_ambient_function': dudx_ambient, 'eta_function': Arrhenius_viscosity_law_pressure(),
                   'g_function': rad_heating_forward, 'kc': kc, 'alpha': alpha,
                   'rho': rho, 'cp': cp, 'gravity': gravity, 'L': L,
                   'l_kwargs': l_kwargs, 'eta_kwargs': eta_kwargs, 'g_kwargs': g_kwargs_decay, 'l': l,
